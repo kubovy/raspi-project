@@ -5,7 +5,7 @@
 #
 import time
 import threading
-from Logger import Logger
+from ModuleMQTT import ModuleMQTT
 
 
 MODE_RUNNING = "RUNNING"
@@ -23,7 +23,10 @@ CHECK_INTERVAL         = 0.09
 CHECK_ROUND_ITERATIONS = 26
 
 
-class ObstacleAvoidance:
+class ObstacleAvoidance(ModuleMQTT):
+    """
+    Obstacle avoidance
+    """
 
     # interrupted = False
     # thread = None
@@ -50,25 +53,17 @@ class ObstacleAvoidance:
     last_distance = -1
 
     def __init__(self, client, service_name, debug=False):
-        self.client = client
-        self.serviceName = service_name
-        self.logger = Logger("ObstacleAvoidance", debug)
+        super(ObstacleAvoidance, self).__init__(client, service_name, "obstacle-avoidance", debug)
 
-        self.client.publish(self.serviceName + "/state/obstacle-avoidance", "OFF", 1, True)
-        self.client.message_callback_add(self.serviceName + "/control/obstacle-avoidance/#", self.on_message)
+        self.client.publish(self.service_name + "/state/obstacle-avoidance", "OFF", 1, True)
+        self.client.message_callback_add(self.service_name + "/control/obstacle-avoidance/#", self.on_message)
 
-    def on_message(self, client, userdata, msg):
-        self.logger.info(msg.topic + ": " + msg.payload)
-        try:
-            path = msg.topic.split("/")
-            if len(path) > 1 and path[0] == self.serviceName and path[1] == "control":  # mutinus/control/#
-                if len(path) > 2 and path[2] == "obstacle-avoidance":                   # mutinus/control/obstacle-avoidance/#
-                    if msg.payload == "ON":
-                        self.start()
-                    else:
-                        self.stop()
-        except:
-            self.logger.error("Unexpected Error!")
+    def on_message(self, path, payload):
+        if len(path) == 0:
+            if payload == "ON":
+                self.start()
+            else:
+                self.stop()
 
     def on_infrared_distance(self, state):
         left = state[0]
@@ -94,7 +89,9 @@ class ObstacleAvoidance:
             self.left_speed = self.right_speed = 0
             self.interval = 0
             self.mode = MODE_TURNING_RIGHT if self.left_timestamp > self.right_timestamp else MODE_TURNING_LEFT
-            self.logger.info("Mode: " + self.mode + ", Left time:" + str(self.left_timestamp) + ", Right time: " + str(self.right_timestamp))
+            self.logger.info("Mode: " + self.mode + ", "
+                             + "Left time:" + str(self.left_timestamp) + ", "
+                             + "Right time: " + str(self.right_timestamp))
         elif self.mode == MODE_RUNNING:
             speed = RUNNING_SPEEDS[-1]
             for i in range(0, len(RUNNING_DISTANCES)):
@@ -103,7 +100,10 @@ class ObstacleAvoidance:
                     break
             self.left_speed = self.right_speed = speed
             self.interval = 0
-        elif self.mode == MODE_TURNING_LEFT and self.left == 1 and self.right == 1 and self.distance > TURNING_DISTANCE_MIN:
+        elif self.mode == MODE_TURNING_LEFT \
+                and self.left == 1 \
+                and self.right == 1 \
+                and self.distance > TURNING_DISTANCE_MIN:
             self.left_speed = self.right_speed = 10
             self.interval = 0
             self.mode = MODE_RUNNING
@@ -112,7 +112,10 @@ class ObstacleAvoidance:
             self.left_speed = -TURNING_SPEED
             self.right_speed = TURNING_SPEED
             self.interval = 0.5
-        elif self.mode == MODE_TURNING_RIGHT and self.left == 1 and self.right == 1 and self.distance > TURNING_DISTANCE_MIN:
+        elif self.mode == MODE_TURNING_RIGHT \
+                and self.left == 1\
+                and self.right == 1\
+                and self.distance > TURNING_DISTANCE_MIN:
             self.left_speed = self.right_speed = 10
             self.interval = 0
             self.mode = MODE_RUNNING
@@ -145,9 +148,14 @@ class ObstacleAvoidance:
                 self.interval = 0
                 threading.Timer(1.0, self.update_wheels).start()
         else:
-            self.logger.info("Mode: " + self.mode + ", Left speed: " + str(self.left_speed) + ", Right speed: " + str(self.right_speed))
+            self.logger.info("Mode: " + self.mode + ", "
+                             + "Left speed: " + str(self.left_speed) + ", "
+                             + "Right speed: " + str(self.right_speed))
 
-        # self.logger.info("Updating: " + self.mode + ", Left: " + str(self.left) + ", Right: " + str(self.right) + ", Distance: " + str(self.distance))
+        # self.logger.info("Updating: " + self.mode + ", "
+        #                  + "Left: " + str(self.left) + ", "
+        #                  + "Right: " + str(self.right) + ", "
+        #                  + "Distance: " + str(self.distance))
         if self.wheels is not None: self.wheels.move(self.left_speed, self.right_speed, self.interval)
 
     # def looper(self):
@@ -162,7 +170,7 @@ class ObstacleAvoidance:
         #    self.interrupted = False
         #    self.thread = threading.Thread(target=self.looper)
         #    self.thread.start()
-        self.client.publish(self.serviceName + "/state/obstacle-avoidance", "ON", 1, True)
+        self.client.publish(self.service_name + "/state/obstacle-avoidance", "ON", 1, True)
         if self.infrared_subscription is None and self.infrared_sensor is not None:
             self.infrared_subscription = self.infrared_sensor.subscribe(lambda state: self.on_infrared_distance(state))
         if self.ultrasonic_subscription is None and self.ultrasonic is not None:
@@ -175,7 +183,7 @@ class ObstacleAvoidance:
         # if self.thread is not None:
         #    self.thread.join(5)
         # self.thread = None
-        self.client.publish(self.serviceName + "/state/obstacle-avoidance", "OFF", 1, True)
+        self.client.publish(self.service_name + "/state/obstacle-avoidance", "OFF", 1, True)
         if self.infrared_subscription is not None:
             self.infrared_subscription.dispose()
             self.infrared_subscription = None
