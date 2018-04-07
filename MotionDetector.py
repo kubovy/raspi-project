@@ -14,6 +14,7 @@ class MotionDetector(ModuleMQTT):
 
     def __init__(self, client, service_name, pin=7, debug=False):
         super(MotionDetector, self).__init__(client, service_name, "motion", debug)
+        self.logger.debug("PIN: " + str(pin))
         self.pin = pin
 
         self.publish("", "CLOSED", 1, True)

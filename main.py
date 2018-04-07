@@ -12,11 +12,13 @@ from Logger import Logger
 from ModuleMQTT import *
 
 from Buzzer import Buzzer
+from Camera import Camera
 from InfraredReceiver import InfraredReceiver
 from InfraredSensor import InfraredSensor
 from Joystick import Joystick
 from MotionDetector import MotionDetector
 from ObstacleAvoidance import ObstacleAvoidance
+from PanTilt import PanTilt
 from Pixels import Pixels
 from RGB import RGB
 from SerialReader import SerialReader
@@ -37,15 +39,8 @@ modules        = []
 # Buzzer
 buzzer_pin = 4
 
-# Camera Servo
-servo_roll_min = 750
-servo_roll_mid = 1750
-servo_roll_max = 2750
-# servo_roll_deg = float(servo_roll_max - servo_roll_min) / 180.0
-servo_pitch_min = 1150
-servo_pitch_mid = 2100
-servo_pitch_max = 2800
-# servo_pitch_deg = servo_roll_deg
+# Camera
+camera_state_file = "/tmp/camera.state"
 
 # Infraread Receiver
 ir_receiver_pin = 17
@@ -70,6 +65,16 @@ pixels_count = 4
 # Serial Reader
 serial_reader_start = False
 serial_reader_ports = []
+
+# Servo
+servo_roll_min = 750
+servo_roll_mid = 1750
+servo_roll_max = 2750
+# servo_roll_deg = float(servo_roll_max - servo_roll_min) / 180.0
+servo_pitch_min = 1150
+servo_pitch_mid = 2100
+servo_pitch_max = 2800
+# servo_pitch_deg = servo_roll_deg
 
 # Ultrasonic
 ultrasonic_pin_trigger = 22
@@ -101,13 +106,8 @@ def initialize(module_names):
     for module_name in module_names:
         if module_name == "buzzer":
             modules.append(Buzzer(mqtt_client, client_id, pin=buzzer_pin, debug=debug))
-        elif module_name == "camera-servo":
-            modules.append(Servo(mqtt_client, client_id,
-                                 servo_mins=[servo_roll_min, servo_pitch_min],
-                                 servo_mids=[servo_roll_mid, servo_pitch_mid],
-                                 servo_maxs=[servo_roll_max, servo_pitch_max],
-                                 degree_span=180.0,
-                                 debug=debug))
+        elif module_name == "camera":
+            modules.append(Camera(mqtt_client, client_id, state_file=camera_state_file, debug=debug))
         elif module_name == "infrared-receiver":
             modules.append(InfraredReceiver(mqtt_client, client_id, pin=ir_receiver_pin, debug=debug))
         elif module_name == "infrared-sensor":
@@ -124,6 +124,8 @@ def initialize(module_names):
             modules.append(MotionDetector(mqtt_client, client_id, pin=motion_detector_pin, debug=debug))
         elif module_name == "obstacle-avoidance":
             modules.append(ObstacleAvoidance(mqtt_client, client_id, debug=debug))
+        elif module_name == "pantilt":
+            modules.append(PanTilt(mqtt_client, client_id, debug=debug))
         elif module_name == "pixels":
             modules.append(Pixels(mqtt_client, client_id, led_pin=pixels_pin, pixel_count=pixels_count, debug=debug))
         elif module_name == "rgb":
@@ -132,6 +134,13 @@ def initialize(module_names):
             modules.append(SerialReader(mqtt_client, client_id,
                                         ports=serial_reader_ports,
                                         debug=debug))
+        elif module_name == "servo":
+            modules.append(Servo(mqtt_client, client_id,
+                                 servo_mins=[servo_roll_min, servo_pitch_min],
+                                 servo_mids=[servo_roll_mid, servo_pitch_mid],
+                                 servo_maxs=[servo_roll_max, servo_pitch_max],
+                                 degree_span=180.0,
+                                 debug=debug))
         elif module_name == "tracking-sensor":
             modules.append(TrackingSensor(mqtt_client, client_id, debug=debug))
         elif module_name == "ultrasonic":
@@ -235,23 +244,28 @@ Options:
   -b, --broker address[:port]                Broker (default: 127.0.0.1, default port: 1883)
   -m, --module name[,name[,...]]             One or more modules to load
       buzzer            : Buzzer
-      camera-servo      : Camera servos
+      camera            : Camera
       infrared-receiver : Infrared remote control receiver
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
       motion-detector   : Motion detector (HC-SR501 PIR)
       obstacle-avoidance: Obstacle avoidance
+      pantilt           : PanTilt HAT
       pixels            : WS281x pixels
       serial-reader     : Serial port reader
       rgb               : RGB Strip
+      servo             : Camera servos
       tracking-sensor   : Tracking sensor
       ultrasonic        : Ultrasonic distance sensor
       water-detector    : Water detector (Flying Fish MH Sensor)
       wheels            : Wheels
       ws281x            : WS281x driver
 
+Motion Detector
+  --motion-detector-pin pin                  Motion detector pin
+
 Serial port reader module:
-  --serial-reader-ports port1[,port2[,...]]  Serial ports to read.
+  --serial-reader-ports port1[,port2[,...]]  Serial ports to read
   --serial-reader-start                      Start listening right away
 
 WS281x Module:
@@ -265,6 +279,7 @@ def main(argv):
     global logger
     global mqtt_client
     global client_id
+    global motion_detector_pin
     global serial_reader_start
     global serial_reader_ports
     global ws281x_start
@@ -275,6 +290,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(argv, "hdb:m:", ["help", "debug", "broker=", "module=",
+                                                    "motion-detector-pin=",
                                                     "serial-reader-start", "serial-reader-ports=",
                                                     "ws281x-start", "ws281x-startup-file="])
     except getopt.GetoptError:
@@ -297,6 +313,8 @@ def main(argv):
         elif opt in ("-m", "--module") and arg not in module_names:
             for module_name in arg.split(","):
                 module_names.append(module_name)
+        elif opt == "--motion-detector-pin":
+            motion_detector_pin = int(arg)
         elif opt == "--serial-reader-start":
             serial_reader_start = True
         elif opt == "--serial-reader-ports":

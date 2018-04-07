@@ -32,11 +32,11 @@ class Servo(ModuleMQTT):
             except ValueError:
                 servo = 1 if path[0] == "pitch" else 0
 
-            if len(path) > 1 and path[1] == "deg" or path[1] == "degrees":  # {service}/control/camera/{servo}/deg
+            if len(path) > 1 and path[1] == "deg" or path[1] == "degrees":  # {service}/servo/camera/{servo}/deg
                 self.set_position_degrees(servo, -float(payload))
-            elif len(path) > 1 and path[1] == "percent":                    # {service}/control/camera/{servo}/percent
+            elif len(path) > 1 and path[1] == "percent":                    # {service}/servo/camera/{servo}/percent
                 self.set_position_percent(servo, int(payload))
-            else:                                                           # {service}/control/camera/{servo}
+            else:                                                           # {service}/servo/camera/{servo}
                 self.set_position(servo, int(payload))
 
     def servo_count(self):

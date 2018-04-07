@@ -3,6 +3,7 @@ import time
 import paho.mqtt.client as mqtt
 import RPi.GPIO as GPIO
 
+
 # The callback for when the client receives a CONNACK response from the server.
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
@@ -15,6 +16,13 @@ def on_connect(client, userdata, flags, rc):
 def on_disconnect(client, userdata, rc):
     if rc != 0:
         print("Unexpected disconnection.")
+
+
+def pin_flip(pin):
+    if GPIO.input(pin):
+        print "PIN " + str(pin) + " = TRUE"
+    else:
+        print "PIN " + str(pin) + " = FALSE"
 
 
 if __name__ == '__main__':
@@ -74,6 +82,18 @@ if __name__ == '__main__':
                     print("Dry")
                 else:
                     print("Water Detected...")
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("Interrupting")
+
+    if "pins" in modules:
+        GPIO.setmode(GPIO.BCM)
+        for pin in [5, 6, 7, 8, 9, 10, 20, 21, 22, 23, 24, 25]:
+            GPIO.setup(pin, GPIO.IN)
+            GPIO.add_event_detect(pin, GPIO.BOTH, callback=pin_flip)
+
+        try:
+            while True:
                 time.sleep(1)
         except KeyboardInterrupt:
             print("Interrupting")
