@@ -42,8 +42,8 @@ def create_mqtt_client(broker_address, broker_port, client_id, clean_session=Tru
     mqtt_client = mqtt.Client(client_id, clean_session, userdata, protocol, transport)
     mqtt_client.on_connect = on_connect
     mqtt_client.on_disconnect = on_disconnect
-    mqtt_client.will_set(client_id + "/state/status", "OFF", 1, True)
+    mqtt_client.will_set(client_id + "/state/status", "CLOSED", 1, True)
     mqtt_client.reconnect_delay_set(min_delay=1, max_delay=60)
     mqtt_client.connect(broker_address, broker_port, 60)  # connect to broker
-    mqtt_client.publish(client_id + "/state/status", "ON", 1, True)
+    mqtt_client.publish(client_id + "/state/status", "OPEN", 1, True)
     return mqtt_client

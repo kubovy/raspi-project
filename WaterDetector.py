@@ -14,6 +14,7 @@ class WaterDetector(ModuleMQTT):
 
     def __init__(self, client, service_name, pin=23, debug=False):
         super(WaterDetector, self).__init__(client, service_name, "water", debug)
+        self.logger.debug("PIN: " + str(pin))
         self.pin = pin
 
         self.publish("", "CLOSED", 1, True)
@@ -21,9 +22,9 @@ class WaterDetector(ModuleMQTT):
         GPIO.setup(pin, GPIO.IN)
         # GPIO.add_event_detect(PIR_PIN, GPIO.RISING, callback=__motion__)
         # GPIO.add_event_detect(PIR_PIN, GPIO.FALLING, callback=__motion__)
-        GPIO.add_event_detect(self.pin, GPIO.BOTH, callback=self.__motion__)
+        GPIO.add_event_detect(self.pin, GPIO.BOTH, callback=self.__water__)
 
-    def __motion__(self, pin):
+    def __water__(self, pin):
         if GPIO.input(pin):
             self.logger.info("No water.")
             self.publish("", "CLOSED", 1, True)

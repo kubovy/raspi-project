@@ -40,7 +40,7 @@ modules        = []
 buzzer_pin = 4
 
 # Camera
-camera_state_file = "/tmp/camera.state"
+camera_state_file = "/run/camera.state"
 
 # Infraread Receiver
 ir_receiver_pin = 17

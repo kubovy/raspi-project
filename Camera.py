@@ -43,7 +43,7 @@ class Camera(ModuleMQTT):
     HC-SR501 PIR (https://www.mpja.com/download/31227sc.pdf)
     """
 
-    def __init__(self, client, service_name, state_file="/tmp/camera.state", debug=False):
+    def __init__(self, client, service_name, state_file="/run/camera.state", debug=False):
         super(Camera, self).__init__(client, service_name, "camera", debug)
         self.state_file = state_file
         self.watch_manager = pyinotify.WatchManager()
