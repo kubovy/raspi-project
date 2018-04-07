@@ -361,4 +361,8 @@ if __name__ == '__main__':
         sys.exit(2)
 
     client_id = sys.argv[1]
+    if client_id == "--help" or client_id == "-h":
+        help()
+        sys.exit(0)
+
     main(sys.argv[2:])
