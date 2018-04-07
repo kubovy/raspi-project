@@ -268,9 +268,14 @@ Serial port reader module:
   --serial-reader-ports port1[,port2[,...]]  Serial ports to read
   --serial-reader-start                      Start listening right away
 
+Water Detector
+  --water-detector-pin pin                   Water detector pin
+
 WS281x Module:
   --ws281x-start                             Start right away
   --ws281x-startup-file file                 Startup file
+  
+
 """
 
 
@@ -282,6 +287,7 @@ def main(argv):
     global motion_detector_pin
     global serial_reader_start
     global serial_reader_ports
+    global water_detector_pin
     global ws281x_start
     global ws281x_startup_file
 
@@ -291,6 +297,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hdb:m:", ["help", "debug", "broker=", "module=",
                                                     "motion-detector-pin=",
+                                                    "water-detector-pin="
                                                     "serial-reader-start", "serial-reader-ports=",
                                                     "ws281x-start", "ws281x-startup-file="])
     except getopt.GetoptError:
@@ -319,6 +326,8 @@ def main(argv):
             serial_reader_start = True
         elif opt == "--serial-reader-ports":
             serial_reader_ports = arg.split(",")
+        elif opt == "--water-detector-pin":
+            water_detector_pin = int(arg)
         elif opt == "--ws281x-start":
             ws281x_start = True
         elif opt == "--ws281x-startup-file":
