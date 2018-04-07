@@ -23,6 +23,7 @@ from SerialReader import SerialReader
 from Servo import Servo
 from TrackingSensor import TrackingSensor
 from Ultrasonic import Ultrasonic
+from WaterDetector import WaterDetector
 from Wheels import Wheels
 from WS281x import WS281x
 
@@ -67,11 +68,15 @@ pixels_pin   = 18
 pixels_count = 4
 
 # Serial Reader
+serial_reader_start = False
 serial_reader_ports = []
 
 # Ultrasonic
 ultrasonic_pin_trigger = 22
 ultrasonic_pin_echo    = 27
+
+# Water Detector
+water_detector_pin = 23
 
 # Wheels
 wheels_pin_right_forward  = 13
@@ -80,9 +85,6 @@ wheels_pin_right_enabled  = 6
 wheels_pin_left_forward   = 21
 wheels_pin_left_backward  = 20
 wheels_pin_left_enabled   = 26
-
-serial_reader_start = False
-serial_reader_ports = []
 
 # WS281x
 ws281x_start = False
@@ -137,6 +139,8 @@ def initialize(module_names):
                                       pin_trigger=ultrasonic_pin_trigger,
                                       pin_echo=ultrasonic_pin_echo,
                                       debug=debug))
+        elif module_name == "water-detector":
+            modules.append(WaterDetector(mqtt_client, client_id, pin=water_detector_pin, debug=debug))
         elif module_name == "wheels":
             modules.append(Wheels(mqtt_client, client_id,
                                   pin_right_forward=wheels_pin_right_forward,
@@ -178,6 +182,8 @@ def initialize(module_names):
             module.tracking_sensor = next(i for i in modules if isinstance(i, TrackingSensor))
         if hasattr(module, "ultrasonic"):
             module.ultrasonic = next(i for i in modules if isinstance(i, Ultrasonic))
+        if hasattr(module, "water_detector"):
+            module.wheels = next(i for i in modules if isinstance(i, WaterDetector))
         if hasattr(module, "wheels"):
             module.wheels = next(i for i in modules if isinstance(i, Wheels))
         if hasattr(module, "ws281x"):
@@ -233,15 +239,16 @@ Options:
       infrared-receiver : Infrared remote control receiver
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
-      motion-detector   : Motion detector
+      motion-detector   : Motion detector (HC-SR501 PIR)
       obstacle-avoidance: Obstacle avoidance
       pixels            : WS281x pixels
       serial-reader     : Serial port reader
       rgb               : RGB Strip
       tracking-sensor   : Tracking sensor
       ultrasonic        : Ultrasonic distance sensor
+      water-detector    : Water detector (Flying Fish MH Sensor)
       wheels            : Wheels
-      ws281x            : WS281x
+      ws281x            : WS281x driver
 
 Serial port reader module:
   --serial-reader-ports port1[,port2[,...]]  Serial ports to read.
@@ -271,6 +278,7 @@ def main(argv):
                                                     "serial-reader-start", "serial-reader-ports=",
                                                     "ws281x-start", "ws281x-startup-file="])
     except getopt.GetoptError:
+        traceback.print_exc()
         help()
         sys.exit(1)
 
@@ -343,7 +351,8 @@ def on_message(client, userdata, msg):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 3:
+    if len(sys.argv) < 2:
+        print("Only " + str(len(sys.argv)) + " parameter given")
         help()
         sys.exit(2)
 
