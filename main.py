@@ -297,7 +297,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hdb:m:", ["help", "debug", "broker=", "module=",
                                                     "motion-detector-pin=",
-                                                    "water-detector-pin="
+                                                    "water-detector-pin=",
                                                     "serial-reader-start", "serial-reader-ports=",
                                                     "ws281x-start", "ws281x-startup-file="])
     except getopt.GetoptError:
@@ -307,6 +307,7 @@ def main(argv):
 
     module_names = []
     for opt, arg in opts:
+        print opt + " = " + arg
         if opt in ("-h", "--help"):
             help()
             sys.exit()
