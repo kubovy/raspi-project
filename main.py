@@ -270,7 +270,7 @@ def main(argv):
     global ws281x_start
     global ws281x_startup_file
 
-    broker_address = "127.0.0.1"
+    broker_host = "127.0.0.1"
     broker_port = 1883
 
     try:
@@ -292,7 +292,7 @@ def main(argv):
             logger = Logger("MAIN", debug)
         elif opt in ("-b", "--broker"):
             broker_params = arg.split(":")
-            broker_address = broker_params[0]
+            broker_host = broker_params[0]
             broker_port = int(broker_params[1]) if len(broker_params) > 1 else broker_port
         elif opt in ("-m", "--module") and arg not in module_names:
             for module_name in arg.split(","):
@@ -310,7 +310,7 @@ def main(argv):
         help()
         sys.exit(2)
 
-    mqtt_client = create_mqtt_client(broker_address, broker_port, client_id,
+    mqtt_client = create_mqtt_client(broker_host, broker_port, client_id,
                                      on_connect=on_connect,
                                      on_disconnect=on_disconnect)
     mqtt_client.on_message = on_message
@@ -339,13 +339,17 @@ def on_disconnect(client, userdata, rc):
 def on_message(client, userdata, msg):
     try:
         logger.debug(msg.topic + ": '" + str(msg.payload) + "'")
-#        path = msg.topic.split("/")
+        path = msg.topic.split("/")
+        payload = msg.payload
+        if len(path) == 2 and path[1] == "control":
+            if payload == "OFF":
+                mqtt_client.disconnect()
 #        if len(path) == 2 and path[1] == "last-will-sink":
 #            broker=msg.payload.split(":")
-#            broker_address = broker[0]
+#            broker_host = broker[0]
 #            broker_port = int(broker[1]) if len(broker) > 1 else 1883
 #
-#            mqtt_client = create_mqtt_client(broker_address, broker_port, client_id)
+#            mqtt_client = create_mqtt_client(broker_host, broker_port, client_id)
     except:
         logger.info("Error!")
 
