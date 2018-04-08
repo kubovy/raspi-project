@@ -48,7 +48,9 @@ class Camera(ModuleMQTT):
         self.state_file = state_file
         self.watch_manager = pyinotify.WatchManager()
         watch_mask = pyinotify.IN_CREATE | pyinotify.IN_MODIFY | pyinotify.IN_DELETE  # watched events
-        self.notifier = pyinotify.ThreadedNotifier(self.watch_manager, EventHandler(self))
+        event_handler = EventHandler(self)
+        event_handler.process()
+        self.notifier = pyinotify.ThreadedNotifier(self.watch_manager, event_handler)
         self.wdd = self.watch_manager.add_watch(state_file, watch_mask)
         self.notifier.start()
 
