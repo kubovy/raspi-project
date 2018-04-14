@@ -399,6 +399,57 @@ class WS281x(ModuleLooper):
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
 
+    def on_message(self, path, payload):
+        if len(path) == 0:
+            if payload == "ON":
+                self.data = json.loads(json.dumps([{'pattern': 'light',
+                                                    'color1': {'red': 255, 'green': 255, 'blue': 255},
+                                                    'color2': {'red': 255, 'green': 255, 'blue': 255},
+                                                    'color3': {'red': 255, 'green': 255, 'blue': 255},
+                                                    'color4': {'red': 255, 'green': 255, 'blue': 255},
+                                                    'color5': {'red': 255, 'green': 255, 'blue': 255},
+                                                    'color6': {'red': 255, 'green': 255, 'blue': 255},
+                                                    'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
+                                       object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            elif payload == "OFF":
+                self.data = json.loads(json.dumps([{'pattern': 'light',
+                                                    'color1': {'red': 0, 'green': 0, 'blue': 0},
+                                                    'color2': {'red': 0, 'green': 0, 'blue': 0},
+                                                    'color3': {'red': 0, 'green': 0, 'blue': 0},
+                                                    'color4': {'red': 0, 'green': 0, 'blue': 0},
+                                                    'color5': {'red': 0, 'green': 0, 'blue': 0},
+                                                    'color6': {'red': 0, 'green': 0, 'blue': 0},
+                                                    'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
+                                       object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            else:
+                try:
+                    value = 255.0 * float(payload) / 100
+                    self.data = json.loads(json.dumps([{'pattern': 'light',
+                                                        'color1': {'red': value, 'green': value, 'blue': value},
+                                                        'color2': {'red': value, 'green': value, 'blue': value},
+                                                        'color3': {'red': value, 'green': value, 'blue': value},
+                                                        'color4': {'red': value, 'green': value, 'blue': value},
+                                                        'color5': {'red': value, 'green': value, 'blue': value},
+                                                        'color6': {'red': value, 'green': value, 'blue': value},
+                                                        'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
+                                           object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                except:
+                    self.logger.error('Oops!  That was no valid number.  Try again...')
+                    traceback.print_exc()
+        elif len(path) == 1 and path[0] == "set":
+            try:
+                self.data = json.loads(payload, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            except ValueError:
+                self.logger.error('Oops!  That was no valid JSON.  Try again...')
+                traceback.print_exc()
+        elif len(path) == 1 and path[0] == "add":
+            try:
+                extension = json.loads(payload, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                self.data.extend(extension)
+            except ValueError:
+                self.logger.error('Oops!  That was no valid JSON.  Try again...')
+                traceback.print_exc()
+
     def on_serial_message(self, message):
         try:
             self.data = json.loads(message, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
