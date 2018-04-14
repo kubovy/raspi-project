@@ -5,30 +5,9 @@
 #
 import sys
 import getopt
-import RPi.GPIO as GPIO
-from neopixel import *
 
 from Logger import Logger
 from ModuleMQTT import *
-
-from Buzzer import Buzzer
-from Camera import Camera
-from InfraredReceiver import InfraredReceiver
-from InfraredSensor import InfraredSensor
-from Joystick import Joystick
-from MotionDetector import MotionDetector
-from ObstacleAvoidance import ObstacleAvoidance
-from PanTilt import PanTilt
-from Pixels import Pixels
-from RGB import RGB
-from SerialReader import SerialReader
-from Servo import Servo
-from TrackingSensor import TrackingSensor
-from Ultrasonic import Ultrasonic
-from WaterDetector import WaterDetector
-from Wheels import Wheels
-from WS281x import WS281x
-
 
 debug          = False
 logger         = Logger("MAIN", debug)
@@ -41,6 +20,9 @@ buzzer_pin = 4
 
 # Camera
 camera_state_file = "/run/camera.state"
+
+# Commander
+commander_checks = None
 
 # Infraread Receiver
 ir_receiver_pin = 17
@@ -95,24 +77,42 @@ wheels_pin_left_enabled   = 26
 ws281x_start = False
 ws281x_startup_file = None
 
+gpio_modules = ["buzzer", "infrared-receiver", "infrared-sensor",  "joystick",  "motion-detector",  "tracking-sensor",
+                "ultrasonic",  "water-detector",  "wheels"]
+gpio_loaded = False
+
 
 def initialize(module_names):
     global modules
+    global gpio_loaded
 
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setwarnings(debug)
+    if [i for i in gpio_modules if i in module_names]:
+        import RPi.GPIO as GPIO
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(debug)
+        gpio_loaded = True
 
     logger.info("Loading modules: " + str(module_names))
     for module_name in module_names:
         if module_name == "buzzer":
+            from Buzzer import Buzzer
             modules.append(Buzzer(mqtt_client, client_id, pin=buzzer_pin, debug=debug))
         elif module_name == "camera":
+            from Camera import Camera
             modules.append(Camera(mqtt_client, client_id, state_file=camera_state_file, debug=debug))
+        elif module_name == "commander":
+            from Commander import Check, Commander
+            checks = None if commander_checks is None else map(lambda p: Check(p[0], p[1], int(p[2])),
+                                                               map(lambda s: s.split(":"), commander_checks.split(",")))
+            modules.append(Commander(mqtt_client, client_id, checks=checks, debug=debug))
         elif module_name == "infrared-receiver":
+            from InfraredReceiver import InfraredReceiver
             modules.append(InfraredReceiver(mqtt_client, client_id, pin=ir_receiver_pin, debug=debug))
         elif module_name == "infrared-sensor":
+            from InfraredSensor import InfraredSensor
             modules.append(InfraredSensor(mqtt_client, client_id, pins=ir_sensor_pins, debug=debug))
         elif module_name == "joystick":
+            from Joystick import Joystick
             modules.append(Joystick(mqtt_client, client_id,
                                     pin_center=joystick_pin_center,
                                     pin_a=joystick_pin_a,
@@ -121,20 +121,27 @@ def initialize(module_names):
                                     pin_d=joystick_pin_d,
                                     debug=debug))
         elif module_name == "motion-detector":
+            from MotionDetector import MotionDetector
             modules.append(MotionDetector(mqtt_client, client_id, pin=motion_detector_pin, debug=debug))
         elif module_name == "obstacle-avoidance":
+            from ObstacleAvoidance import ObstacleAvoidance
             modules.append(ObstacleAvoidance(mqtt_client, client_id, debug=debug))
         elif module_name == "pantilt":
+            from PanTilt import PanTilt
             modules.append(PanTilt(mqtt_client, client_id, debug=debug))
         elif module_name == "pixels":
+            from Pixels import Pixels
             modules.append(Pixels(mqtt_client, client_id, led_pin=pixels_pin, pixel_count=pixels_count, debug=debug))
         elif module_name == "rgb":
+            from RGB import RGB
             modules.append(RGB(mqtt_client, client_id, debug=debug))
         elif module_name == "serial-reader":
+            from SerialReader import SerialReader
             modules.append(SerialReader(mqtt_client, client_id,
                                         ports=serial_reader_ports,
                                         debug=debug))
         elif module_name == "servo":
+            from Servo import Servo
             modules.append(Servo(mqtt_client, client_id,
                                  servo_mins=[servo_roll_min, servo_pitch_min],
                                  servo_mids=[servo_roll_mid, servo_pitch_mid],
@@ -142,15 +149,19 @@ def initialize(module_names):
                                  degree_span=180.0,
                                  debug=debug))
         elif module_name == "tracking-sensor":
+            from TrackingSensor import TrackingSensor
             modules.append(TrackingSensor(mqtt_client, client_id, debug=debug))
         elif module_name == "ultrasonic":
+            from Ultrasonic import Ultrasonic
             modules.append(Ultrasonic(mqtt_client, client_id,
                                       pin_trigger=ultrasonic_pin_trigger,
                                       pin_echo=ultrasonic_pin_echo,
                                       debug=debug))
         elif module_name == "water-detector":
+            from WaterDetector import WaterDetector
             modules.append(WaterDetector(mqtt_client, client_id, pin=water_detector_pin, debug=debug))
         elif module_name == "wheels":
+            from Wheels import Wheels
             modules.append(Wheels(mqtt_client, client_id,
                                   pin_right_forward=wheels_pin_right_forward,
                                   pin_right_backward=wheels_pin_right_backward,
@@ -160,6 +171,7 @@ def initialize(module_names):
                                   pin_left_enabled=wheels_pin_left_enabled,
                                   debug=debug))
         elif module_name == "ws281x":
+            from WS281x import WS281x
             modules.append(WS281x(mqtt_client, client_id, startup_file=ws281x_startup_file, debug=debug))
         else:
             logger.error("Unknown module " + module_name + "!")
@@ -168,39 +180,63 @@ def initialize(module_names):
     for module in modules:
 
         if hasattr(module, 'buzzer'):
+            from Buzzer import Buzzer
             module.buzzer = next(i for i in modules if isinstance(i, Buzzer))
         if hasattr(module, "infrared_receiver"):
+            from InfraredReceiver import InfraredReceiver
             module.infrared_receiver = next(i for i in modules if isinstance(i, InfraredReceiver))
         if hasattr(module, "infrared_sensor"):
+            from InfraredSensor import InfraredSensor
             module.infrared_sensor = next(i for i in modules if isinstance(i, InfraredSensor))
         if hasattr(module, "joystick"):
+            from Joystick import Joystick
             module.joystick = next(i for i in modules if isinstance(i, Joystick))
         if hasattr(module, "motion_detector"):
+            from MotionDetector import MotionDetector
             modules.motion_detector = next(i for i in modules if isinstance(i, MotionDetector))
         if hasattr(module, "obstacle_avoidance"):
+            from ObstacleAvoidance import ObstacleAvoidance
             module.obstacle_avoidance = next(i for i in modules if isinstance(i, ObstacleAvoidance))
         if hasattr(module, "pixels"):
+            from Pixels import Pixels
             module.pixels = next(i for i in modules if isinstance(i, Pixels))
         if hasattr(module, "rgb"):
+            from RGB import RGB
             module.rgb = next(i for i in modules if isinstance(i, RGB))
         if hasattr(module, "serial_reader"):
+            from SerialReader import SerialReader
             module.serial_reader = next(i for i in modules if isinstance(i, SerialReader))
         if hasattr(module, "servo"):
+            from Servo import Servo
             module.servo = next(i for i in modules if isinstance(i, Servo))
         if hasattr(module, "tracking_sensor"):
+            from TrackingSensor import TrackingSensor
             module.tracking_sensor = next(i for i in modules if isinstance(i, TrackingSensor))
         if hasattr(module, "ultrasonic"):
+            from Ultrasonic import Ultrasonic
             module.ultrasonic = next(i for i in modules if isinstance(i, Ultrasonic))
         if hasattr(module, "water_detector"):
+            from WaterDetector import WaterDetector
             module.wheels = next(i for i in modules if isinstance(i, WaterDetector))
         if hasattr(module, "wheels"):
+            from Wheels import Wheels
             module.wheels = next(i for i in modules if isinstance(i, Wheels))
         if hasattr(module, "ws281x"):
+            from WS281x import WS281x
             module.ws281x = next(i for i in modules if isinstance(i, WS281x))
 
     for module in modules:
-        if serial_reader_start and isinstance(module, SerialReader) \
-                or ws281x_start and isinstance(module, WS281x):
+        autostart = False
+        if serial_reader_start:
+            from SerialReader import SerialReader
+            if isinstance(module, SerialReader):
+                autostart = True
+        if ws281x_start:
+            from WS281x import WS281x
+            if isinstance(module, WS281x):
+                autostart = True
+
+        if autostart:
             start_method = getattr(module, "start", None)
             if callable(start_method):
                 start_method()
@@ -231,7 +267,9 @@ def looper():
         for module in modules:
             module.finalize()
 
-        GPIO.cleanup()
+        if gpio_loaded:
+            import RPi.GPIO as GPIO
+            GPIO.cleanup()
         mqtt_client.publish("mutinus/state/status", "CLOSED", 1, True)
 
 
@@ -245,6 +283,7 @@ Options:
   -m, --module name[,name[,...]]             One or more modules to load
       buzzer            : Buzzer
       camera            : Camera
+      commander         : Commander
       infrared-receiver : Infrared remote control receiver
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
@@ -260,6 +299,9 @@ Options:
       water-detector    : Water detector (Flying Fish MH Sensor)
       wheels            : Wheels
       ws281x            : WS281x driver
+
+Commander
+  --commander-checks topic1:command1:interval1[,topic2:command2:interval2[,...]]
 
 Motion Detector
   --motion-detector-pin pin                  Motion detector pin
@@ -284,6 +326,7 @@ def main(argv):
     global logger
     global mqtt_client
     global client_id
+    global commander_checks
     global motion_detector_pin
     global serial_reader_start
     global serial_reader_ports
@@ -296,6 +339,7 @@ def main(argv):
 
     try:
         opts, args = getopt.getopt(argv, "hdb:m:", ["help", "debug", "broker=", "module=",
+                                                    "commander-checks=",
                                                     "motion-detector-pin=",
                                                     "water-detector-pin=",
                                                     "serial-reader-start", "serial-reader-ports=",
@@ -321,6 +365,8 @@ def main(argv):
         elif opt in ("-m", "--module") and arg not in module_names:
             for module_name in arg.split(","):
                 module_names.append(module_name)
+        elif opt == "--commander-checks":
+            commander_checks = arg
         elif opt == "--motion-detector-pin":
             motion_detector_pin = int(arg)
         elif opt == "--serial-reader-start":
@@ -348,6 +394,7 @@ def main(argv):
 
 
 # The callback for when the client receives a CONNACK response from the server.
+# noinspection PyUnusedLocal
 def on_connect(client, userdata, flags, rc):
     logger.info("Connected with result code " + str(rc))
 
@@ -358,12 +405,14 @@ def on_connect(client, userdata, flags, rc):
     client.publish(client_id + "/state/status", "OPEN", 1, True)
 
 
+# noinspection PyUnusedLocal
 def on_disconnect(client, userdata, rc):
     if rc != 0:
         logger.error("Unexpected disconnection.")
 
 
 # The callback for when a PUBLISH message is received from the server.
+# noinspection PyUnusedLocal
 def on_message(client, userdata, msg):
     try:
         logger.debug(msg.topic + ": '" + str(msg.payload) + "'")

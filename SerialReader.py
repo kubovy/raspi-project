@@ -27,11 +27,16 @@ class SerialReader(ModuleLooper):
     fast_success = True
     content = ""
     listeners = []
+    serial_ports = []
+    buffers = []
 
     def __init__(self, client, service_name, identifier="20180214", ports=None, debug=False):
         super(SerialReader, self).__init__(client, service_name, "serial-reader", debug)
         self.identifier = identifier
         self.ports = [] if ports is None else ports
+        for i in range(len(self.ports)):
+            self.serial_ports.append(None)
+            self.buffers.append(None)
 
     def register(self, listener):
         if listener not in self.listeners:
@@ -61,16 +66,44 @@ class SerialReader(ModuleLooper):
         serial_port.flushOutput()
         return serial_port
 
-    def __port_looper__(self, port):
-        self.logger.debug(">>" + str(port))
+    def __readline__(self, index):
+        serial_port = self.serial_ports[index]
+        i = self.buffers[index].find(b"\n")
+        if i >= 0:
+            line = self.buffers[index][:i + 1]
+            self.buffers[index] = self.buffers[index][i + 1:]
+            return line.decode("utf-8")
+        while True:
+            try:
+                while serial_port.in_waiting == 0:
+                    time.sleep(1)
+            except:
+                self.logger.error("Unexpected Error!")
+                traceback.print_exc()
+            i = max(1, min(2048, serial_port.in_waiting))
+            data = serial_port.read(i)
+            i = data.find(b"\n")
+            if i >= 0:
+                line = self.buffers[index] + data[:i + 1]
+                self.buffers[index][0:] = data[i + 1:]
+                return line.decode("utf-8")
+            else:
+                self.buffers[index].extend(data)
+
+    def __port_looper__(self, index):
+        self.logger.debug(">>" + str(self.ports[index]))
+        self.buffers[index] = bytearray()
+        port = self.ports[index]
+
         while not self.interrupted:  # Not connected
             try:
                 serial_port = self.__port_init__(port)
-
+                self.serial_ports[index] = serial_port
                 try:
                     while not self.interrupted:
-                        line = serial_port.readline()
-                        self.__process_line__(port, serial_port, line.strip())
+                        line = self.__readline__(index)
+                        # line = serial_port.readline()
+                        self.__process_line__(index, line.strip())
                         time.sleep(0.001)
                 except serial.SerialException:
                     self.logger.error("Unexpected Error!")
@@ -78,10 +111,13 @@ class SerialReader(ModuleLooper):
                 finally:
                     serial_port.close()
             except:
-                self.logger.error("Cannot establish connection with "+ port)
+                self.logger.error("Cannot establish connection with " + port)
+                # traceback.print_exc()
                 time.sleep(2)
 
-    def __process_line__(self, port, serial_port, line):
+    def __process_line__(self, index, line):
+        port = str(self.ports[index])
+        serial_port = self.serial_ports[index]
         if line != "":
             if self.mode == 0 and line == STX:  # and self.receiving_serial_port is None:
                 self.logger.info("[" + port + "] STX: Message start")
@@ -132,8 +168,8 @@ class SerialReader(ModuleLooper):
         self.content = ""
 
     def looper(self):
-        for port in self.ports:
-            thread = threading.Thread(target=self.__port_looper__, args=[port])
+        for i in range(len(self.ports)):
+            thread = threading.Thread(target=self.__port_looper__, args=[i])
             self.port_threads.append(thread)
             thread.start()
 

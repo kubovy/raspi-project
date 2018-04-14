@@ -14,10 +14,11 @@ class Logger:
         self.name = name
         self.isDebugging = debug
         self.log_file = log_file
-        try:
-            os.remove(log_file)
-        except OSError:
-            traceback.print_exc()
+        if os.path.exists(log_file):
+            try:
+                os.remove(log_file)
+            except OSError:
+                traceback.print_exc()
         
     def debug(self, message):
         if self.isDebugging: self.__log__(time.ctime() + " DEBUG [" + self.name + "]: " + message)
@@ -31,7 +32,7 @@ class Logger:
     def __log__(self, raw_message):
         print(raw_message)
         try:
-            with open(self.log_file, "a") as fp:
+            with open(self.log_file, "a+") as fp:
                 fp.write(raw_message)
         except:
             traceback.print_exc()

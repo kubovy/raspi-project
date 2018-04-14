@@ -424,17 +424,19 @@ class WS281x(ModuleLooper):
                 self.light(Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), 50)
                 continue
 
-            index = iteration  # start + (iteration % (len(self.data) - start))
-            conf = self.data[index]
+            # index = iteration  # start + (iteration % (len(self.data) - start))
+            if iteration > len(self.data): iteration = 0
+            conf = self.data[iteration]
 
             if conf.pattern == 'clear':
-                for i in range(index + 1):
-                    self.data.pop(0)
+                del self.data[:iteration + 1]
+                iteration = 0
+
             # start = index + 1
-            self.logger.info('Cleared index=' + str(index) + ', length=' + str(len(self.data)))
+            # self.logger.info('Cleared index=' + str(index) + ', length=' + str(len(self.data)))
             # + ', start=' + str(start))
-            index = 0  # start + (iteration % (len(self.data) - start))
-            conf = self.data[index]
+            # index = 0  # start + (iteration % (len(self.data) - start))
+            conf = self.data[iteration]
 
             # print ('Index: ' + str(start) + '+(' + str(iteration) + '%(' + str(len(self.data)) + '-' + str(start) + ')='
             #        + str(index) + ': ' + conf.pattern + ' c1=' + str(conf.color1) + ', c2=' + str(conf.color2) + ','
