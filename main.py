@@ -102,7 +102,7 @@ def initialize(module_names):
             modules.append(Camera(mqtt_client, client_id, state_file=camera_state_file, debug=debug))
         elif module_name == "commander":
             from Commander import Check, Commander
-            checks = None if commander_checks is None else map(lambda p: Check(p[0], p[1], int(p[2])),
+            checks = None if commander_checks is None else map(lambda p: Check(p[0], int(p[1])),
                                                                map(lambda s: s.split(":"), commander_checks.split(",")))
             modules.append(Commander(mqtt_client, client_id, checks=checks, debug=debug))
         elif module_name == "infrared-receiver":
@@ -301,7 +301,7 @@ Options:
       ws281x            : WS281x driver
 
 Commander
-  --commander-checks topic1:command1:interval1[,topic2:command2:interval2[,...]]
+  --commander-checks command1:interval1[,command2:interval2[,...]]
 
 Motion Detector
   --motion-detector-pin pin                  Motion detector pin
