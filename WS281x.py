@@ -421,9 +421,28 @@ class WS281x(ModuleLooper):
                                                     'color6': {'red': 0, 'green': 0, 'blue': 0},
                                                     'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
                                        object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            elif len(payload.split(",")) == 3:
+                rgb = payload.split(",")
+                try:
+                    red = int(rgb[0])
+                    green = int(rgb[1])
+                    blue = int(rgb[2])
+
+                    self.data = json.loads(json.dumps([{'pattern': 'light',
+                                                        'color1': {'red': red, 'green': green, 'blue': blue},
+                                                        'color2': {'red': red, 'green': green, 'blue': blue},
+                                                        'color3': {'red': red, 'green': green, 'blue': blue},
+                                                        'color4': {'red': red, 'green': green, 'blue': blue},
+                                                        'color5': {'red': red, 'green': green, 'blue': blue},
+                                                        'color6': {'red': red, 'green': green, 'blue': blue},
+                                                        'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
+                                           object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                except:
+                    self.logger.error('Oops!  That was no valid RGB color.  Try again...')
+                    traceback.print_exc()
             else:
                 try:
-                    value = 255.0 * float(payload) / 100
+                    value = int(255.0 * float(payload) / 100)
                     self.data = json.loads(json.dumps([{'pattern': 'light',
                                                         'color1': {'red': value, 'green': value, 'blue': value},
                                                         'color2': {'red': value, 'green': value, 'blue': value},
