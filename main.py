@@ -76,6 +76,10 @@ wheels_pin_left_enabled   = 26
 # WS281x
 ws281x_start = False
 ws281x_startup_file = None
+ws281x_led_count = 50
+ws281x_reverse = False
+ws281x_row_led_count = 24
+ws281x_row_count = 2
 
 gpio_modules = ["buzzer", "infrared-receiver", "infrared-sensor",  "joystick",  "motion-detector",  "tracking-sensor",
                 "ultrasonic",  "water-detector",  "wheels"]
@@ -172,7 +176,13 @@ def initialize(module_names):
                                   debug=debug))
         elif module_name == "ws281x":
             from WS281x import WS281x
-            modules.append(WS281x(mqtt_client, client_id, startup_file=ws281x_startup_file, debug=debug))
+            modules.append(WS281x(mqtt_client, client_id,
+                                  startup_file=ws281x_startup_file,
+                                  led_count=ws281x_led_count,
+                                  row_led_count=ws281x_row_led_count,
+                                  row_count=ws281x_row_count,
+                                  reverse=ws281x_reverse,
+                                  debug=debug))
         else:
             logger.error("Unknown module " + module_name + "!")
 
@@ -181,49 +191,49 @@ def initialize(module_names):
 
         if hasattr(module, 'buzzer'):
             from Buzzer import Buzzer
-            module.buzzer = next(i for i in modules if isinstance(i, Buzzer))
+            module.buzzer = next((i for i in modules if isinstance(i, Buzzer)), None)
         if hasattr(module, "infrared_receiver"):
             from InfraredReceiver import InfraredReceiver
-            module.infrared_receiver = next(i for i in modules if isinstance(i, InfraredReceiver))
+            module.infrared_receiver = next((i for i in modules if isinstance(i, InfraredReceiver)), None)
         if hasattr(module, "infrared_sensor"):
             from InfraredSensor import InfraredSensor
-            module.infrared_sensor = next(i for i in modules if isinstance(i, InfraredSensor))
+            module.infrared_sensor = next((i for i in modules if isinstance(i, InfraredSensor)), None)
         if hasattr(module, "joystick"):
             from Joystick import Joystick
-            module.joystick = next(i for i in modules if isinstance(i, Joystick))
+            module.joystick = next((i for i in modules if isinstance(i, Joystick)), None)
         if hasattr(module, "motion_detector"):
             from MotionDetector import MotionDetector
-            modules.motion_detector = next(i for i in modules if isinstance(i, MotionDetector))
+            modules.motion_detector = next((i for i in modules if isinstance(i, MotionDetector)), None)
         if hasattr(module, "obstacle_avoidance"):
             from ObstacleAvoidance import ObstacleAvoidance
-            module.obstacle_avoidance = next(i for i in modules if isinstance(i, ObstacleAvoidance))
+            module.obstacle_avoidance = next((i for i in modules if isinstance(i, ObstacleAvoidance)), None)
         if hasattr(module, "pixels"):
             from Pixels import Pixels
-            module.pixels = next(i for i in modules if isinstance(i, Pixels))
+            module.pixels = next((i for i in modules if isinstance(i, Pixels)), None)
         if hasattr(module, "rgb"):
             from RGB import RGB
-            module.rgb = next(i for i in modules if isinstance(i, RGB))
+            module.rgb = next((i for i in modules if isinstance(i, RGB)), None)
         if hasattr(module, "serial_reader"):
             from SerialReader import SerialReader
-            module.serial_reader = next(i for i in modules if isinstance(i, SerialReader))
+            module.serial_reader = next((i for i in modules if isinstance(i, SerialReader)), None)
         if hasattr(module, "servo"):
             from Servo import Servo
-            module.servo = next(i for i in modules if isinstance(i, Servo))
+            module.servo = next((i for i in modules if isinstance(i, Servo)), None)
         if hasattr(module, "tracking_sensor"):
             from TrackingSensor import TrackingSensor
-            module.tracking_sensor = next(i for i in modules if isinstance(i, TrackingSensor))
+            module.tracking_sensor = next((i for i in modules if isinstance(i, TrackingSensor)), None)
         if hasattr(module, "ultrasonic"):
             from Ultrasonic import Ultrasonic
-            module.ultrasonic = next(i for i in modules if isinstance(i, Ultrasonic))
+            module.ultrasonic = next((i for i in modules if isinstance(i, Ultrasonic)), None)
         if hasattr(module, "water_detector"):
             from WaterDetector import WaterDetector
-            module.wheels = next(i for i in modules if isinstance(i, WaterDetector))
+            module.wheels = next((i for i in modules if isinstance(i, WaterDetector)), None)
         if hasattr(module, "wheels"):
             from Wheels import Wheels
-            module.wheels = next(i for i in modules if isinstance(i, Wheels))
+            module.wheels = next((i for i in modules if isinstance(i, Wheels)), None)
         if hasattr(module, "ws281x"):
             from WS281x import WS281x
-            module.ws281x = next(i for i in modules if isinstance(i, WS281x))
+            module.ws281x = next((i for i in modules if isinstance(i, WS281x)), None)
 
     for module in modules:
         autostart = False
@@ -314,9 +324,12 @@ Water Detector
   --water-detector-pin pin                   Water detector pin
 
 WS281x Module:
+  --ws281x-led-count count                   Total LED count (default 50)
+  --ws281x-reverse                           Reverse LED order
+  --ws281x-row-count count                   Number of rows (default 2)
+  --ws281x-row-led-count count               LED count in one row (default 24)
   --ws281x-start                             Start right away
   --ws281x-startup-file file                 Startup file
-  
 
 """
 
@@ -328,22 +341,21 @@ def main(argv):
     global client_id
     global commander_checks
     global motion_detector_pin
-    global serial_reader_start
-    global serial_reader_ports
+    global serial_reader_start, serial_reader_ports
     global water_detector_pin
-    global ws281x_start
-    global ws281x_startup_file
+    global ws281x_start, ws281x_startup_file, ws281x_led_count, ws281x_row_led_count, ws281x_row_count, ws281x_reverse
 
     broker_host = "127.0.0.1"
     broker_port = 1883
 
     try:
-        opts, args = getopt.getopt(argv, "hdb:m:", ["help", "debug", "broker=", "module=",
-                                                    "commander-checks=",
-                                                    "motion-detector-pin=",
-                                                    "water-detector-pin=",
-                                                    "serial-reader-start", "serial-reader-ports=",
-                                                    "ws281x-start", "ws281x-startup-file="])
+        opts, args = getopt.getopt(argv, "hdb:m:", [
+            "help", "debug", "broker=", "module=",
+            "commander-checks=",
+            "motion-detector-pin=",
+            "water-detector-pin=",
+            "serial-reader-start", "serial-reader-ports=",
+            "ws281x-start", "ws281x-startup-file=", "--ws281x-reverse", "ws281x-led-count=", "ws281x-row-led-count=", "ws281x-row-count="])
     except getopt.GetoptError:
         traceback.print_exc()
         help()
@@ -379,6 +391,14 @@ def main(argv):
             ws281x_start = True
         elif opt == "--ws281x-startup-file":
             ws281x_startup_file = arg
+        elif opt == "--ws281x-led-count":
+            ws281x_led_count = int(arg)
+        elif opt == "--ws281x-reverse":
+            ws281x_reverse = True
+        elif opt == "--ws281x-row-led-count":
+            ws281x_row_led_count = (arg)
+        elif opt == "--ws281x-row-count":
+            ws281x_row_count = int(arg)
 
     if client_id is None:
         help()

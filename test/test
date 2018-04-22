@@ -1,0 +1,1 @@
+sudo python ./main.py otidea -d -m ws281x --ws281x-start --ws281x-led-count 100 --ws281x-row-count 4 -d --ws281x-startup-file test/

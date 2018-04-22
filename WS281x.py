@@ -5,9 +5,6 @@
 # Direct port of the Arduino NeoPixel library strandtest example.  Showcases
 # various animations on a strip of NeoPixels.
 import json
-import os
-
-from collections import namedtuple
 from neopixel import *
 from ModuleLooper import *
 
@@ -20,9 +17,72 @@ def Color(red, green, blue, white = 0):
     return (white << 24) | (red << 8)| (green << 16) | blue
 
 
-def Color2(color):
-        """Color2"""
-        return Color(color.red, color.green, color.blue)
+def to_color(data):
+    return Color(data['red'], data['green'], data['blue'])
+
+
+def dump_color(color):
+    red = (color & (255 << 8)) >> 8
+    green = (color & (255 << 16)) >> 16
+    blue = (color & 255)
+    return str(red) + "," + str(green) + "," + str(blue)
+
+
+def to_configs(data):
+    configs = []
+    for item in data:
+        config = Config()
+        if 'pattern' in item.keys(): config.pattern = item['pattern']
+        config.color1 = to_color(item['color1']) if 'color1' in item.keys() else None
+        config.color2 = to_color(item['color2']) if 'color2' in item.keys() else None
+        config.color3 = to_color(item['color3']) if 'color3' in item.keys() else None
+        config.color4 = to_color(item['color4']) if 'color4' in item.keys() else None
+        config.color5 = to_color(item['color5']) if 'color5' in item.keys() else None
+        config.color6 = to_color(item['color6']) if 'color6' in item.keys() else None
+        config.color7 = to_color(item['color7']) if 'color7' in item.keys() else None
+        config.color8 = to_color(item['color8']) if 'color8' in item.keys() else None
+        config.color9 = to_color(item['color9']) if 'color9' in item.keys() else None
+        config.color10 = to_color(item['color10']) if 'color10' in item.keys() else None
+        config.color11 = to_color(item['color11']) if 'color11' in item.keys() else None
+        config.color12 = to_color(item['color12']) if 'color12' in item.keys() else None
+        if 'wait' in item.keys(): config.wait = item['wait']
+        if 'width' in item.keys(): config.width = item['width']
+        if 'fading' in item.keys(): config.fading = item['fading']
+        if 'min' in item.keys(): config.min = item['min']
+        if 'max' in item.keys(): config.max = item['max']
+        configs.append(config)
+    return configs
+
+
+class Config(object):
+    def __init__(self, pattern="light", color1=0, color2=0,color3=0, color4=0, color5=0, color6=0, color7=0, color8=0,
+                 color9=0, color10=0, color11=0, color12=0, wait=50, width=3, fading=0, minimum=0, maximum=100):
+
+        self.pattern = pattern
+        self.color1 = color1
+        self.color2 = color2
+        self.color3 = color3
+        self.color4 = color4
+        self.color5 = color5
+        self.color6 = color6
+        self.color7 = color7
+        self.color8 = color8
+        self.color9 = color9
+        self.color10 = color10
+        self.color11 = color11
+        self.color12 = color12
+        self.wait = wait
+        self.width = width
+        self.fading = fading
+        self.min = minimum
+        self.max = maximum
+
+    def clone(self):
+        return Config(pattern=self.pattern, color1=self.color1, color2=self.color2, color3=self.color3,
+                      color4=self.color4, color5=self.color5, color6=self.color6, color7=self.color7,
+                      color8=self.color8, color9=self.color9, color10=self.color10, color11=self.color11,
+                      color12=self.color12, wait=self.wait, width=self.width, fading=self.fading, minimum=self.min,
+                      maximum=self.max)
 
 
 def wheel(pos):
@@ -48,19 +108,21 @@ class WS281x(ModuleLooper):
     LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
     LED_STRIP = ws.WS2811_STRIP_GRB  # Strip type and colour ordering
 
-    data = json.loads(json.dumps([{'pattern': 'fade',
-                                   'color1': {'red': 16, 'green': 16, 'blue': 16},
-                                   'color2': {'red': 16, 'green': 16, 'blue': 16},
-                                   'color3': {'red': 16, 'green': 16, 'blue': 16},
-                                   'color4': {'red': 16, 'green': 16, 'blue': 16},
-                                   'color5': {'red': 16, 'green': 16, 'blue': 16},
-                                   'color6': {'red': 16, 'green': 16, 'blue': 16},
-                                   'wait': 10,
-                                   'width': 3,
-                                   'fading': 0,
-                                   'min': 50,
-                                   'max': 80}]),
-                      object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+    data = to_configs(json.loads(json.dumps([{
+        'pattern': 'fade',
+        'color1': {'red': 16, 'green': 16, 'blue': 16},
+        'color2': {'red': 16, 'green': 16, 'blue': 16},
+        'color3': {'red': 16, 'green': 16, 'blue': 16},
+        'color4': {'red': 16, 'green': 16, 'blue': 16},
+        'color5': {'red': 16, 'green': 16, 'blue': 16},
+        'color6': {'red': 16, 'green': 16, 'blue': 16},
+        'color7': {'red': 16, 'green': 16, 'blue': 16},
+        'color8': {'red': 16, 'green': 16, 'blue': 16},
+        'color9': {'red': 16, 'green': 16, 'blue': 16},
+        'color10': {'red': 16, 'green': 16, 'blue': 16},
+        'color11': {'red': 16, 'green': 16, 'blue': 16},
+        'color12': {'red': 16, 'green': 16, 'blue': 16},
+        'wait': 10, 'width': 3, 'fading': 0, 'min': 50, 'max': 80}])))
 
     interrupted = False
     thread = None
@@ -68,7 +130,7 @@ class WS281x(ModuleLooper):
     serial_reader = None
 
     def __init__(self, client, service_name, startup_file=None,
-                 led_count=50, row_led_count=12, row_count=2, debug=False):
+                 led_count=50, row_led_count=24, row_count=2, reverse=False, debug=False):
         super(WS281x, self).__init__(client, service_name, "ws281x", debug)
         # Create NeoPixel object with appropriate configuration.
         self.startup_file = startup_file
@@ -76,320 +138,303 @@ class WS281x(ModuleLooper):
         self.row_led_count = row_led_count
         self.row_count = row_count
         self.rest_count = int(self.led_count - (self.row_led_count * self.row_count))
+        self.reverse = reverse
         self.strip = Adafruit_NeoPixel(self.led_count, self.LED_PIN, self.LED_FREQ_HZ, self.LED_DMA, self.LED_INVERT,
                                        self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
         # Intialize the library (must be called once before other functions).
         self.strip.begin()
 
+    def __set_pixel_color(self, num, color):
+        num_safe = self.led_count - num - 1 if self.reverse else num
+        # self.logger.debug("Pixel: " + str(num_safe) + " color: " + dump_color(color))
+        self.strip.setPixelColor(num_safe, color)
+
+    def __color_id__(self, config, position):
+        color_count = 0
+        while hasattr(config, 'color' + str(color_count + 1)) \
+                and getattr(config, 'color' + str(color_count + 1), None) is not None:
+            color_count = color_count + 1
+
+        if position.startswith('top'):
+            num = int(position.split("-")[1]) % self.rest_count
+            color_num = color_count - self.rest_count + num
+        else:
+            num = int(position)
+            color_num = num % (color_count - self.rest_count)
+
+            # group = num - (num % 2)
+            # group_color_num = group * 2
+            # color_num = group_color_num + (num % 2)
+            # if variation == "B": color_num = color_num + 2
+        color_key = 'color' + str(color_num + 1)
+        # self.logger.debug("ColorID: " + position + " -> " + color_key)
+        return color_key
+
+    def __color__(self, config, position, value=None):
+        if value is not None:
+            setattr(config, self.__color_id__(config, position), value)
+        return getattr(config, self.__color_id__(config, position))
+
     # Define functions which animate LEDs in various ways.
     def color_wipe(self, color, wait_ms=50):
         """Wipe color across display a pixel at a time."""
-        for i in range(self.strip.numPixels()):
-            self.strip.setPixelColor(i, color)
+        for i in range(self.led_count):
+            self.__set_pixel_color(i, color)
             self.strip.show()
             time.sleep(wait_ms / 1000.0)
 
-    def theater(self, color1, color2, color5, color6, wait_ms=50, iterations=10):
+    def theater(self, config):
         """Movie theater light style chaser animation."""
-        half = (self.strip.numPixels() - 2) / 2
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for j in range(iterations):
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+
+        for j in range(config.fading):  # iterations
             for q in range(3):
-                for i in range(0, half, 3):
-                    self.strip.setPixelColor(i + q, color1)
-                    self.strip.setPixelColor(i + q + half, color2)
+                for i in range(0, self.row_led_count, 3):
+                    for row in range(self.row_count):
+                        self.__set_pixel_color(i + q + (row * self.row_led_count), self.__color__(config, str(row)))
                     self.strip.show()
-                time.sleep(wait_ms / 1000.0)
-                for i in range(0, half, 3):
-                    self.strip.setPixelColor(i + q, 0)
-                    self.strip.setPixelColor(i + q + half, 0)
+                time.sleep(config.wait / 1000.0)
+                for i in range(0, self.row_led_count, 3):
+                    for row in range(self.row_count):
+                        self.__set_pixel_color(i + q + (row * self.row_led_count), 0)
 
-    def rainbow(self, wait_ms=20, iterations=1):
+    def rainbow(self, config):
         """Draw rainbow that fades across all pixels at once."""
-        for j in range(256 * iterations):
-            for i in range(self.strip.numPixels()):
-                self.strip.setPixelColor(i, wheel((i + j) & 255))
-            self.strip.show()
-            time.sleep(wait_ms / 1000.0)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-    def rainbow_cycle(self, wait_ms=20, iterations=5):
+        for j in range(256 * config.fading):  # iterations
+            for i in range(self.row_count * self.row_led_count):
+                self.__set_pixel_color(i, wheel((i + j) & 255))
+            self.strip.show()
+            time.sleep(config.wait / 1000.0)
+
+    def rainbow_cycle(self, config):
         """Draw rainbow that uniformly distributes itself across all pixels."""
-        for j in range(256 * iterations):
-            for i in range(self.strip.numPixels()):
-                self.strip.setPixelColor(i, wheel((int(i * 256 / self.strip.numPixels()) + j) & 255))
-            self.strip.show()
-            time.sleep(wait_ms / 1000.0)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-    def theater_chase_rainbow(self, wait_ms=50):
+        for j in range(256 * config.fading):  # iterations
+            for i in range(self.row_count * self.row_led_count):
+                self.__set_pixel_color(i, wheel((int(i * 256 / self.led_count) + j) & 255))
+            self.strip.show()
+            time.sleep(config.wait / 1000.0)
+
+    def theater_chase_rainbow(self, config):
         """Rainbow movie theater light style chaser animation."""
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+
         for j in range(256):
             for q in range(3):
-                for i in range(0, self.strip.numPixels(), 3):
-                    self.strip.setPixelColor(i + q, wheel((i + j) % 255))
+                for i in range(0, self.row_count * self.row_led_count, 3):
+                    self.__set_pixel_color(i + q, wheel((i + j) % 255))
                 self.strip.show()
-                time.sleep(wait_ms / 1000.0)
-                for i in range(0, self.strip.numPixels(), 3):
-                    self.strip.setPixelColor(i + q, 0)
+                time.sleep(config.wait / 1000.0)
+                for i in range(0, self.row_count * self.row_led_count, 3):
+                    self.__set_pixel_color(i + q, 0)
 
     # Mine
 
-    def wipe(self, color1, color2, color5, color6, wait_ms=50, sleep=0):
+    def wipe(self, config):
         """Wipe color across display a pixel at a time."""
-        half = (self.strip.numPixels() - 2) / 2
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for i in range(half):
-            self.strip.setPixelColor(i, color1)
-            self.strip.setPixelColor(i + half, color2)
-            self.strip.show()
-            time.sleep(wait_ms / 1000.0)
-        if sleep > 0:
-            time.sleep(sleep / 1000.0)
-            self.wipe(Color(0, 0, 0), Color(0, 0, 0, ), color5, color6, wait_ms, 0)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-    def light(self, color1, color2, color5, color6, wait_ms=50):
-        half = (self.strip.numPixels() - 2) / 2
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for i in range(half):
-            self.strip.setPixelColor(i, color1)
-            self.strip.setPixelColor(i + half, color2)
+        for i in range(self.row_led_count):
+            for row in range(self.row_count):
+                self.__set_pixel_color(i + (row * self.row_led_count), self.__color__(config, str(row)))
+            self.strip.show()
+            time.sleep(config.wait / 1000.0)
+        if config.fading > 0:
+            time.sleep(config.fading / 1000.0)
+            copy = config.clone()
+            for row in range(self.row_count):
+                self.__color__(copy, str(row), 0)
+            copy.fading = 0
+            self.wipe(copy)
+
+    def light(self, config):
+        """Light"""
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for row in range(self.row_count):
+            for i in range(self.row_led_count):
+                self.__set_pixel_color(i + (row * self.row_led_count), self.__color__(config, str(row)))
         self.strip.show()
-        time.sleep(wait_ms / 1000.0)
+        time.sleep(config.wait / 1000.0)
 
-    def rotation(self, color1, color2, color5, color6, width=3, fade=0, wait_ms=50):
+    def rotation(self, config):
         """Rotation"""
-        half = (self.strip.numPixels() - 2) / 2
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for i in range(half):
-            for j in range(half):
-                self.strip.setPixelColor(j, Color(0, 0, 0))
-                self.strip.setPixelColor(j + half, Color(0, 0, 0))
-            for k in range(width):
-                # white1 = (color1 & (255 << 24)) >> 24
-                red1 = (color1 & (255 << 8)) >> 8
-                green1 = (color1 & (255 << 16)) >> 16
-                blue1 = (color1 & 255)
-                # white2 = (color2 & (255 << 24)) >> 24
-                red2 = (color2 & (255 << 8)) >> 8
-                green2 = (color2 & (255 << 16)) >> 16
-                blue2 = (color2 & 255)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-                percent = 100.0 - float(width - k - 1) * float(fade)
-                factor = percent / 100.0
+        for i in range(self.row_led_count):
+            for j in range(self.row_led_count * self.row_count):
+                self.__set_pixel_color(j, 0)
+            for row in range(self.row_count):
+                # white = (color1 & (255 << 24)) >> 24
+                red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
+                green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
+                blue = (self.__color__(config, str(row)) & 255)
 
-                r1 = int(float(red1) * factor)
-                g1 = int(float(green1) * factor)
-                b1 = int(float(blue1) * factor)
-                r2 = int(float(red2) * factor)
-                g2 = int(float(green2) * factor)
-                b2 = int(float(blue2) * factor)
-                # self.logger.debug(str(percent) + ' -> ' + str(factor) + ': ' + str(r) + ', ' + str(g) + ', ' + str(b))
+                for w in range(config.width):
+                    percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
+                    factor = percent / 100.0
+                    color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                    j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
+                    self.__set_pixel_color(j + (row * self.row_led_count), color)
 
-                c1 = Color(r1, g1, b1)
-                c2 = Color(r2, g2, b2)
-
-                p = i + k if (i + k < half) else (i + k) - half
-                self.strip.setPixelColor(p, c1)
-                self.strip.setPixelColor(p + half, c2)
             self.strip.show()
-            time.sleep(wait_ms / 1000.0)
+            time.sleep(config.wait / 1000.0)
 
-    def spin(self, color1, color2, color5, color6):
+    def spin(self, config):
         """Spin"""
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
+        use = config.clone()
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(use, "top-" + str(i)))
         for w in range(5):
-            self.rotation(color1, color2, 24, 4, 50 - (w * 10))
-            self.rotation(color1, color2, 24, 4, 50 - (w * 10))
+            use.width = self.row_led_count
+            use.fading = 100 / self.row_led_count
+            use.wait = 50 - (w * 10)
+            self.rotation(use)
         for w in range(3):
-            self.lighthouse(color1, color2, color1, color2, Color(0, 0, 0), Color(0, 0, 0), 12, 4, 30 - (w * 10))
-            self.lighthouse(color1, color2, color1, color2, Color(0, 0, 0), Color(0, 0, 0), 12, 4, 30 - (w * 10))
-        self.light(color1, color2, Color(0, 0, 0), Color(0, 0, 0))
+            use.width = self.row_led_count / 2
+            use.fading = 100 / (self.row_led_count / 2)
+            use.wait = 30 - (w * 10)
+            self.lighthouse(use)
+            self.lighthouse(use)
+            use.wait = 50
+        self.light(use)
         time.sleep(10)
 
-    def chaise(self, color1, color2, color5, color6, width=3, fade=0, wait_ms=50):
-        """Rotation"""
-        half = (self.strip.numPixels() - 2) / 2
-        for i in range(half):
-            for j in range(half):
-                self.strip.setPixelColor(j, Color(0, 0, 0))
-                self.strip.setPixelColor(j + half, Color(0, 0, 0))
-            for k in range(width):
-                # white1 = (color1 & (255 << 24)) >> 24
-                red1 = (color1 & (255 << 8)) >> 8
-                green1 = (color1 & (255 << 16)) >> 16
-                blue1 = (color1 & 255)
-                # white2 = (color2 & (255 << 24)) >> 24
-                red2 = (color2 & (255 << 8)) >> 8
-                green2 = (color2 & (255 << 16)) >> 16
-                blue2 = (color2 & 255)
+    def chaise(self, config):
+        """Chaice"""
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-                percent = 100.0 - float(width - k - 1) * float(fade)
-                factor = percent / 100.0
+        for i in range(self.row_led_count):
+            for j in range(self.row_led_count * self.row_count):
+                self.__set_pixel_color(j, 0)
+            for w in range(config.width):
+                for row in range(self.row_count):
+                    # white = (color1 & (255 << 24)) >> 24
+                    red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
+                    green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
+                    blue = (self.__color__(config, str(row)) & 255)
 
-                r1 = int(float(red1) * factor)
-                g1 = int(float(green1) * factor)
-                b1 = int(float(blue1) * factor)
-                r2 = int(float(red2) * factor)
-                g2 = int(float(green2) * factor)
-                b2 = int(float(blue2) * factor)
-                # self.logger.debug(str(percent) + ' -> ' + str(factor) + ': ' + str(r) + ', ' + str(g) + ', ' + str(b))
+                    percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
+                    factor = percent / 100.0
 
-                c1 = Color(r1, g1, b1)
-                c2 = Color(r2, g2, b2)
+                    color = Color( int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                    if row < self.row_count / 2:
+                        j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
+                    else:
+                        j = self.row_led_count - (i + w) - 1 if (self.row_led_count > i + w) \
+                            else (self.row_led_count - (i + w) - 1) + self.row_led_count
+                    self.__set_pixel_color(j + (row * self.row_led_count), color)
 
-                p = i + k if (i + k < half) else (i + k) - half
-                q = half - (i + k) if (half - (i + k) >= 0) else (half - (i + k)) + half
-                self.strip.setPixelColor(p, c1)
-                self.strip.setPixelColor(q + half, c2)
-            self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-            self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
             self.strip.show()
-            time.sleep(wait_ms / 1000.0)
+            time.sleep(config.wait / 1000.0)
 
-    def lighthouse(self, color1, color2, color3, color4, color5, color6, width=3, fade=0, wait_ms=50):
+    def lighthouse(self, config):
         """Lighthouse"""
-        half = (self.strip.numPixels() - 2) / 2
-        quarter = half / 2
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for i in range(half):
-            for j in range(half):
-                self.strip.setPixelColor(j, Color(0, 0, 0))
-                self.strip.setPixelColor(j + half, Color(0, 0, 0))
-            for k in range(width):
-                # white1 = (color1 & (255 << 24)) >> 24
-                red1 = (color1 & (255 << 8)) >> 8
-                green1 = (color1 & (255 << 16)) >> 16
-                blue1 = (color1 & 255)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+
+        for i in range(self.row_led_count):
+            for j in range(self.row_led_count * self.row_count):
+                self.__set_pixel_color(j, 0)
+            for row in range(self.row_count):
+                # white1 = (self.__color__(config, str(row * 2)) & (255 << 24)) >> 24
+                red1 = (self.__color__(config, str(row)) & (255 << 8)) >> 8
+                green1 = (self.__color__(config, str(row)) & (255 << 16)) >> 16
+                blue1 = (self.__color__(config, str(row)) & 255)
                 # white2 = (color2 & (255 << 24)) >> 24
-                red2 = (color2 & (255 << 8)) >> 8
-                green2 = (color2 & (255 << 16)) >> 16
-                blue2 = (color2 & 255)
-                # white3 = (color3 & (255 << 24)) >> 24
-                red3 = (color3 & (255 << 8)) >> 8
-                green3 = (color3 & (255 << 16)) >> 16
-                blue3 = (color3 & 255)
-                # white4 = (color4 & (255 << 24)) >> 24
-                red4 = (color4 & (255 << 8)) >> 8
-                green4 = (color4 & (255 << 16)) >> 16
-                blue4 = (color4 & 255)
+                red2 = (self.__color__(config, str(row + self.row_count)) & (255 << 8)) >> 8
+                green2 = (self.__color__(config, str(row + self.row_count)) & (255 << 16)) >> 16
+                blue2 = (self.__color__(config, str(row + self.row_count)) & 255)
 
-                percent = 100.0 - float(width - k - 1) * float(fade)
-                factor = percent / 100.0
+                for w in range(config.width):
+                    percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
+                    factor = percent / 100.0
+                    color1 = Color(int(float(red1) * factor), int(float(green1) * factor), int(float(blue1) * factor))
+                    color2 = Color(int(float(red2) * factor), int(float(green2) * factor), int(float(blue2) * factor))
 
-                r1 = int(float(red1) * factor)
-                g1 = int(float(green1) * factor)
-                b1 = int(float(blue1) * factor)
-                r2 = int(float(red2) * factor)
-                g2 = int(float(green2) * factor)
-                b2 = int(float(blue2) * factor)
-                r3 = int(float(red3) * factor)
-                g3 = int(float(green3) * factor)
-                b3 = int(float(blue3) * factor)
-                r4 = int(float(red4) * factor)
-                g4 = int(float(green4) * factor)
-                b4 = int(float(blue4) * factor)
-                # self.logger.debug(str(percent) + ' -> ' + str(factor) + ': ' + str(r) + ', ' + str(g) + ', ' + str(b))
+                    half = self.row_led_count / 2
+                    j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
+                    q = j + half if (j + half < self.row_led_count) else (j + half) - self.row_led_count
 
-                c1 = Color(r1, g1, b1)
-                c2 = Color(r2, g2, b2)
-                c3 = Color(r3, g3, b3)
-                c4 = Color(r4, g4, b4)
+                    self.__set_pixel_color(j + (row * self.row_led_count), color1)
+                    self.__set_pixel_color(q + (row * self.row_led_count), color2)
 
-                p = i + k if (i + k < half) else (i + k) - half
-                q = p + quarter if (p + quarter < half) else (p + quarter) - half
-                self.strip.setPixelColor(p, c1)
-                self.strip.setPixelColor(p + half, c3)
-                self.strip.setPixelColor(q, c2)
-                self.strip.setPixelColor(q + half, c4)
             self.strip.show()
-            time.sleep(wait_ms / 1000.0)
+            time.sleep(config.wait / 1000.0)
 
-    def fade(self, color1, color2, color5, color6, wait_ms=50, minimum=0, maximum=100):
+    def fade(self, config):
         """Fade"""
-        half = (self.strip.numPixels() - 2) / 2
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-        # white1 = (color1 & (255 << 24)) >> 24
-        red1 = (color1 & (255 << 8)) >> 8
-        green1 = (color1 & (255 << 16)) >> 16
-        blue1 = (color1 & 255)
-        # white2 = (color2 & (255 << 24)) >> 24
-        red2 = (color2 & (255 << 8)) >> 8
-        green2 = (color2 & (255 << 16)) >> 16
-        blue2 = (color2 & 255)
-        # self.logger.debug('Input: ' + str(red) + ', ' + str(green) + ', ' + str(blue))
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for pr in range((maximum - minimum + 1) * 2):
-            percent = pr + minimum if ((pr + minimum) <= maximum) else maximum - (pr + minimum - maximum)
+        for step in range((config.max - config.min) * 2):
+            percent = step + config.min if ((step + config.min) < config.max) else \
+                config.max - (step + config.min - config.max)
             factor = float(percent) / 100.0
-            # self.logger.debug(str(pr) + ', ' + str(percent) + ', ' + str(factor))
-            r1 = int(float(red1) * factor)
-            g1 = int(float(green1) * factor)
-            b1 = int(float(blue1) * factor)
-            r2 = int(float(red2) * factor)
-            g2 = int(float(green2) * factor)
-            b2 = int(float(blue2) * factor)
-            c1 = Color(r1, g1, b1)
-            c2 = Color(r2, g2, b2)
-            # self.logger.debug('Color: ' + str(r) + ', ' + str(g) + ', ' + str(b))
-            for i in range(half):
-                self.strip.setPixelColor(i, c1)
-                self.strip.setPixelColor(i + half, c2)
-            self.strip.show()
-            time.sleep(wait_ms / 1000.0)
 
-    def fade_toggle(self, color1, color2, color5, color6, wait_ms=50, minimum=0, maximum=100):
+            for row in range(self.row_count):
+                # white1 = (self.__color__(config, str(row)) & (255 << 24)) >> 24
+                red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
+                green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
+                blue = (self.__color__(config, str(row)) & 255)
+                color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                for i in range(self.row_led_count):
+                    self.__set_pixel_color(i + (row * self.row_led_count), color)
+
+            self.strip.show()
+            time.sleep(config.wait / 1000.0)
+
+    def fade_toggle(self, config):
         """Fade Toggle"""
-        half = (self.strip.numPixels() - 2) / 2
-        # white1 = (color1 & (255 << 24)) >> 24
-        red1 = (color1 & (255 << 8)) >> 8
-        green1 = (color1 & (255 << 16)) >> 16
-        blue1 = (color1 & 255)
-        # white2 = (color2 & (255 << 24)) >> 24
-        red2 = (color2 & (255 << 8)) >> 8
-        green2 = (color2 & (255 << 16)) >> 16
-        blue2 = (color2 & 255)
-        # self.logger.debug('Input: ' + str(red) + ', ' + str(green) + ', ' + str(blue))
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for pr in range((maximum - minimum + 1) * 2):
-            percent = pr + minimum if ((pr + minimum) <= maximum) else maximum - (pr + minimum - maximum)
-            factor1 = float(percent) / 100.0
-            factor2 = float(maximum - percent + minimum) / 100.0
-            r1 = int(float(red1) * factor1)
-            g1 = int(float(green1) * factor1)
-            b1 = int(float(blue1) * factor1)
-            c1 = Color(r1, g1, b1)
-            r2 = int(float(red2) * factor2)
-            g2 = int(float(green2) * factor2)
-            b2 = int(float(blue2) * factor2)
-            c2 = Color(r2, g2, b2)
-            for i in range(half):
-                self.strip.setPixelColor(i, c1)
-                self.strip.setPixelColor(i + half, c2)
-            self.strip.show()
-            time.sleep(wait_ms / 1000.0)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-    def blink(self, color1, color2, color5, color6, wait_ms=50):
+        for step in range((config.max - config.min) * 2):
+            percent = step + config.min if ((step + config.min) < config.max) else \
+                config.max - (step + config.min - config.max)
+
+            for row in range(self.row_count):
+                if row < self.row_count / 2:
+                    factor = float(percent) / 100.0
+                else:
+                    factor = float(config.max - percent + config.min) / 100.0
+                # white1 = (self.__color__(config, str(row)) & (255 << 24)) >> 24
+                red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
+                green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
+                blue = (self.__color__(config, str(row)) & 255)
+                color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                for i in range(self.row_led_count):
+                    self.__set_pixel_color(i + (row * self.row_led_count), color)
+
+            self.strip.show()
+            time.sleep(config.wait / 1000.0)
+
+    def blink(self, config):
         """Blink"""
-        half = (self.strip.numPixels() - 2) / 2
-        self.strip.setPixelColor(self.strip.numPixels() - 1, color5)
-        self.strip.setPixelColor(self.strip.numPixels() - 2, color6)
-        for i in range(half):
-            self.strip.setPixelColor(i, color1)
-            self.strip.setPixelColor(i + half, color2)
+        for i in range(self.rest_count):
+            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+
+        for row in range(self.row_count):
+            for i in range(self.row_led_count):
+                self.__set_pixel_color(i + (row * self.row_led_count), self.__color__(config, str(row)))
         self.strip.show()
-        time.sleep(wait_ms / 1000.0)
-        for i in range(half):
-            self.strip.setPixelColor(i, Color(0, 0, 0))
-            self.strip.setPixelColor(i + half, Color(0, 0, 0))
+        time.sleep(config.wait / 1000.0)
+
+        for row in range(self.row_count):
+            for i in range(self.row_led_count):
+                self.__set_pixel_color(i + (row * self.row_led_count), 0)
         self.strip.show()
-        time.sleep(wait_ms / 1000.0)
+        time.sleep(config.wait / 1000.0)
 
     def on_start(self):
         if self.serial_reader is not None:
@@ -402,76 +447,101 @@ class WS281x(ModuleLooper):
     def on_message(self, path, payload):
         if len(path) == 0:
             if payload == "ON":
-                self.data = json.loads(json.dumps([{'pattern': 'light',
-                                                    'color1': {'red': 255, 'green': 255, 'blue': 255},
-                                                    'color2': {'red': 255, 'green': 255, 'blue': 255},
-                                                    'color3': {'red': 255, 'green': 255, 'blue': 255},
-                                                    'color4': {'red': 255, 'green': 255, 'blue': 255},
-                                                    'color5': {'red': 255, 'green': 255, 'blue': 255},
-                                                    'color6': {'red': 255, 'green': 255, 'blue': 255},
-                                                    'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
-                                       object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                self.data = to_configs(json.loads(json.dumps([{
+                    'pattern': 'light',
+                    'color1': {'red': 255, 'green': 255, 'blue': 255},
+                    'color2': {'red': 255, 'green': 255, 'blue': 255},
+                    'color3': {'red': 255, 'green': 255, 'blue': 255},
+                    'color4': {'red': 255, 'green': 255, 'blue': 255},
+                    'color5': {'red': 255, 'green': 255, 'blue': 255},
+                    'color6': {'red': 255, 'green': 255, 'blue': 255},
+                    'color7': {'red': 255, 'green': 255, 'blue': 255},
+                    'color8': {'red': 255, 'green': 255, 'blue': 255},
+                    'color9': {'red': 255, 'green': 255, 'blue': 255},
+                    'color10': {'red': 255, 'green': 255, 'blue': 255},
+                    'color11': {'red': 255, 'green': 255, 'blue': 255},
+                    'color12': {'red': 255, 'green': 255, 'blue': 255},
+                    'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}])))
             elif payload == "OFF":
-                self.data = json.loads(json.dumps([{'pattern': 'light',
-                                                    'color1': {'red': 0, 'green': 0, 'blue': 0},
-                                                    'color2': {'red': 0, 'green': 0, 'blue': 0},
-                                                    'color3': {'red': 0, 'green': 0, 'blue': 0},
-                                                    'color4': {'red': 0, 'green': 0, 'blue': 0},
-                                                    'color5': {'red': 0, 'green': 0, 'blue': 0},
-                                                    'color6': {'red': 0, 'green': 0, 'blue': 0},
-                                                    'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
-                                       object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                self.data = to_configs(json.loads(json.dumps([{
+                    'pattern': 'light',
+                    'color1': {'red': 0, 'green': 0, 'blue': 0},
+                    'color2': {'red': 0, 'green': 0, 'blue': 0},
+                    'color3': {'red': 0, 'green': 0, 'blue': 0},
+                    'color4': {'red': 0, 'green': 0, 'blue': 0},
+                    'color5': {'red': 0, 'green': 0, 'blue': 0},
+                    'color6': {'red': 0, 'green': 0, 'blue': 0},
+                    'color7': {'red': 0, 'green': 0, 'blue': 0},
+                    'color8': {'red': 0, 'green': 0, 'blue': 0},
+                    'color9': {'red': 0, 'green': 0, 'blue': 0},
+                    'color10': {'red': 0, 'green': 0, 'blue': 0},
+                    'color11': {'red': 0, 'green': 0, 'blue': 0},
+                    'color12': {'red': 0, 'green': 0, 'blue': 0},
+                    'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}])))
             elif len(payload.split(",")) == 3:
                 rgb = payload.split(",")
                 try:
                     red = int(rgb[0])
                     green = int(rgb[1])
                     blue = int(rgb[2])
-
-                    self.data = json.loads(json.dumps([{'pattern': 'light',
-                                                        'color1': {'red': red, 'green': green, 'blue': blue},
-                                                        'color2': {'red': red, 'green': green, 'blue': blue},
-                                                        'color3': {'red': red, 'green': green, 'blue': blue},
-                                                        'color4': {'red': red, 'green': green, 'blue': blue},
-                                                        'color5': {'red': red, 'green': green, 'blue': blue},
-                                                        'color6': {'red': red, 'green': green, 'blue': blue},
-                                                        'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
-                                           object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                    self.data = to_configs(json.loads(json.dumps([{
+                        'pattern': 'light',
+                        'color1': {'red': red, 'green': green, 'blue': blue},
+                        'color2': {'red': red, 'green': green, 'blue': blue},
+                        'color3': {'red': red, 'green': green, 'blue': blue},
+                        'color4': {'red': red, 'green': green, 'blue': blue},
+                        'color5': {'red': red, 'green': green, 'blue': blue},
+                        'color6': {'red': red, 'green': green, 'blue': blue},
+                        'color7': {'red': red, 'green': green, 'blue': blue},
+                        'color8': {'red': red, 'green': green, 'blue': blue},
+                        'color9': {'red': red, 'green': green, 'blue': blue},
+                        'color10': {'red': red, 'green': green, 'blue': blue},
+                        'color11': {'red': red, 'green': green, 'blue': blue},
+                        'color12': {'red': red, 'green': green, 'blue': blue},
+                        'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}])))
                 except:
                     self.logger.error('Oops!  That was no valid RGB color.  Try again...')
                     traceback.print_exc()
             else:
                 try:
                     value = int(255.0 * float(payload) / 100)
-                    self.data = json.loads(json.dumps([{'pattern': 'light',
-                                                        'color1': {'red': value, 'green': value, 'blue': value},
-                                                        'color2': {'red': value, 'green': value, 'blue': value},
-                                                        'color3': {'red': value, 'green': value, 'blue': value},
-                                                        'color4': {'red': value, 'green': value, 'blue': value},
-                                                        'color5': {'red': value, 'green': value, 'blue': value},
-                                                        'color6': {'red': value, 'green': value, 'blue': value},
-                                                        'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}]),
-                                           object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                    self.data = to_configs(json.loads(json.dumps([{
+                        'pattern': 'light',
+                        'color1': {'red': value, 'green': value, 'blue': value},
+                        'color2': {'red': value, 'green': value, 'blue': value},
+                        'color3': {'red': value, 'green': value, 'blue': value},
+                        'color4': {'red': value, 'green': value, 'blue': value},
+                        'color5': {'red': value, 'green': value, 'blue': value},
+                        'color6': {'red': value, 'green': value, 'blue': value},
+                        'color7': {'red': value, 'green': value, 'blue': value},
+                        'color8': {'red': value, 'green': value, 'blue': value},
+                        'color9': {'red': value, 'green': value, 'blue': value},
+                        'color10': {'red': value, 'green': value, 'blue': value},
+                        'color11': {'red': value, 'green': value, 'blue': value},
+                        'color12': {'red': value, 'green': value, 'blue': value},
+                        'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}])))
                 except:
                     self.logger.error('Oops!  That was no valid number.  Try again...')
                     traceback.print_exc()
         elif len(path) == 1 and path[0] == "set":
             try:
-                self.data = json.loads(payload, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                self.data = to_configs(json.loads(payload))
             except ValueError:
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
         elif len(path) == 1 and path[0] == "add":
             try:
-                extension = json.loads(payload, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+                extension = to_configs(json.loads(payload))
                 self.data.extend(extension)
             except ValueError:
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
+        else:
+            super(WS281x, self).on_message(path, payload)
 
     def on_serial_message(self, message):
         try:
-            self.data = json.loads(message, object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
+            self.data = to_configs(json.loads(message))
         except ValueError:
             self.logger.error('Oops!  That was no valid JSON.  Try again...')
             traceback.print_exc()
@@ -479,26 +549,26 @@ class WS281x(ModuleLooper):
     def looper(self):
         iteration = 0
 
-        try:
-            self.data = json.load(open(self.startup_file),
-                                  object_hook=lambda d: namedtuple('X', d.keys())(*d.values()))
-            self.logger.info('Startup: ' + str(len(self.data)) + ' items')
-        except ValueError:
-            self.logger.error('Oops!  That was no valid JSON.  Try again...')
-            traceback.print_exc()
+        if self.startup_file is not None:
+            try:
+                self.data = to_configs(json.load(open(self.startup_file)))
+                self.logger.info('Startup: ' + str(len(self.data)) + ' items')
+            except ValueError:
+                self.logger.error('Oops!  That was no valid JSON.  Try again...')
+                traceback.print_exc()
 
         # lastRestartChange = os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0
         # (os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0) == lastRestartChange:
         while not self.interrupted:
             if len(self.data) == 0:
-                self.light(Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), Color(0, 0, 0), 50)
+                self.light(Config(wait=10, minimum=50, maximum=80))
                 continue
 
             # index = iteration  # start + (iteration % (len(self.data) - start))
             if iteration > len(self.data): iteration = 0
-            conf = self.data[iteration]
+            config = self.data[iteration]
 
-            if conf.pattern == 'clear':
+            if config.pattern == 'clear':
                 del self.data[:iteration + 1]
                 iteration = 0
 
@@ -506,55 +576,56 @@ class WS281x(ModuleLooper):
             # self.logger.info('Cleared index=' + str(index) + ', length=' + str(len(self.data)))
             # + ', start=' + str(start))
             # index = 0  # start + (iteration % (len(self.data) - start))
-            conf = self.data[iteration]
+            config = self.data[iteration]
 
-            # print ('Index: ' + str(start) + '+(' + str(iteration) + '%(' + str(len(self.data)) + '-' + str(start) + ')='
-            #        + str(index) + ': ' + conf.pattern + ' c1=' + str(conf.color1) + ', c2=' + str(conf.color2) + ','
-            #        + ' c3=' + str(conf.color3) + ', c4=' + str(conf.color4) + ', c5=' + str(conf.color5) + ','
-            #        + ' c6=' + str(conf.color6) + ', wait=' + str(conf.wait) + 'ms, width=' + str(conf.width) + ','
-            #        + ' fading=' + str(conf.fading) + ', min=' + str(conf.min) + ', max=' + str(conf.max))
-            # self.logger.debug('Index: ' + str(index) + '|' + str(iteration) + ': ' + conf.pattern
-            #        + ' c1=' + str(conf.color1) + ', c2=' + str(conf.color2) + ', c3=' + str(conf.color3) + ','
-            #        + ' c4=' + str(conf.color4) + ', c5=' + str(conf.color5) + ', c6=' + str(conf.color6) + ','
-            #        + ' wait=' + str(conf.wait) + 'ms, width=' + str(conf.width) + ', fading=' + str(conf.fading) + ','
-            #        + ' min=' + str(conf.min) + ', max=' + str(conf.max))
-            if conf.pattern == 'wipe':
-                self.wipe(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                          conf.wait, conf.fading)
-            elif conf.pattern == 'light':
-                self.light(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                           conf.wait)
-            elif conf.pattern == 'rotation':
-                self.rotation(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                              conf.width, conf.fading, conf.wait)
-            elif conf.pattern == 'spin':
-                self.spin(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6))
-            elif conf.pattern == 'chaise':
-                self.chaise(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                            conf.width, conf.fading, conf.wait)
-            elif conf.pattern == 'lighthouse':
-                self.lighthouse(Color2(conf.color1), Color2(conf.color2), Color2(conf.color3), Color2(conf.color4),
-                                Color2(conf.color5), Color2(conf.color6), conf.width, conf.fading, conf.wait)
-            elif conf.pattern == 'fade':
-                self.fade(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                          conf.wait, conf.min, conf.max)
-            elif conf.pattern == 'fadeToggle':
-                self.fade_toggle(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                                 conf.wait, conf.min, conf.max)
-            elif conf.pattern == 'blink':
-                self.blink(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                           conf.wait)
-            elif conf.pattern == 'theater':
-                self.theater(Color2(conf.color1), Color2(conf.color2), Color2(conf.color5), Color2(conf.color6),
-                             conf.wait, conf.fading)
-            elif conf.pattern == 'rainbow':
-                self.rainbow(conf.wait, conf.fading)
-            elif conf.pattern == 'rainbowCycle':
-                self.rainbow_cycle(conf.wait, conf.fading)
-            elif conf.pattern == 'wait':
-                time.sleep(conf.wait / 1000.0)
+            # self.logger.debug(
+            #    'Iteration: ' + str(iteration) + ': ' + config.pattern
+            #    + ' c1=' + str(config.color1) + ', c2=' + str(config.color2) + ', c3=' + str(config.color3) + ','
+            #    + ' c4=' + str(config.color4) + ', c5=' + str(config.color5) + ', c6=' + str(config.color6) + ','
+            #    + ' c7=' + str(config.color7) + ', c8=' + str(config.color8) + ', c9=' + str(config.color3) + ','
+            #    + ' c10=' + str(config.color10) + ', c11=' + str(config.color11) + ', c12=' + str(config.color12) + ','
+            #    + ' wait=' + str(config.wait) + 'ms, width=' + str(config.width) + ','
+            #    + ' fading=' + str(config.fading) + ', min=' + str(config.min) + ', max=' + str(config.max))
+            if config.pattern == 'wipe':
+                self.wipe(config)
+            elif config.pattern == 'light':
+                self.light(config)
+            elif config.pattern == 'rotation':
+                self.rotation(config)
+            elif config.pattern == 'spin':
+                self.spin(config)
+            elif config.pattern == 'chaise':
+                self.chaise(config)
+            elif config.pattern == 'lighthouse':
+                self.lighthouse(config)
+            elif config.pattern == 'fade':
+                self.fade(config)
+            elif config.pattern == 'fadeToggle':
+                self.fade_toggle(config)
+            elif config.pattern == 'blink':
+                self.blink(config)
+            elif config.pattern == 'theater':
+                self.theater(config)
+            elif config.pattern == 'theaterChaiseRainbow':
+                self.theater_chase_rainbow(config)
+            elif config.pattern == 'rainbow':
+                self.rainbow(config)
+            elif config.pattern == 'rainbowCycle':
+                self.rainbow_cycle(config)
+            elif config.pattern == 'wait':
+                time.sleep(config.wait / 1000.0)
             else:
-                self.fade(Color(16, 16, 16), Color(16, 16, 16), Color(0, 0, 0), Color(0, 0, 0), 10, 50, 80)
+                self.fade(Config(color1=Color(16, 16, 16),
+                                 color2=Color(16, 16, 16),
+                                 color3=Color(16, 16, 16),
+                                 color4=Color(16, 16, 16),
+                                 color5=Color(16, 16, 16),
+                                 color6=Color(16, 16, 16),
+                                 color7=Color(16, 16, 16),
+                                 color8=Color(16, 16, 16),
+                                 wait=10,
+                                 minimum=50,
+                                 maximum=80))
 
             iteration = iteration + 1
             if iteration >= len(self.data): iteration = 0
