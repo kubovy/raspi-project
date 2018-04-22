@@ -355,7 +355,8 @@ def main(argv):
             "motion-detector-pin=",
             "water-detector-pin=",
             "serial-reader-start", "serial-reader-ports=",
-            "ws281x-start", "ws281x-startup-file=", "--ws281x-reverse", "ws281x-led-count=", "ws281x-row-led-count=", "ws281x-row-count="])
+            "ws281x-start", "ws281x-startup-file=", "ws281x-reverse",
+            "ws281x-led-count=", "ws281x-row-led-count=", "ws281x-row-count="])
     except getopt.GetoptError:
         traceback.print_exc()
         help()
