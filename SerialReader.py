@@ -5,6 +5,7 @@
 #
 import binascii
 import serial
+from serial.serialutil import *
 import time
 import threading
 import traceback
@@ -59,7 +60,7 @@ class SerialReader(ModuleLooper):
         # serial_port.xonxoff = False  # Disable Software Flow Control
         # serial_port.rtscts = False  # Disable (RTS/CTS) flow Control
         # serial_port.dsrdtr = False  # Disable (DSR/DTR) flow Control
-        # serial_port.writeTimeout = 2
+        serial_port.write_timeout = 2
 
         serial_port.open()
         serial_port.flushInput()
@@ -73,27 +74,33 @@ class SerialReader(ModuleLooper):
             line = self.buffers[index][:i + 1]
             self.buffers[index] = self.buffers[index][i + 1:]
             return line.decode("utf-8")
-        while True:
+        while not self.interrupted:
             try:
-                while serial_port.in_waiting == 0:
+                while not self.interrupted and serial_port.in_waiting == 0:
                     time.sleep(1)
             except:
-                self.logger.error("Unexpected Error!")
+                self.logger.error("Unexpected Error (a)!")
                 traceback.print_exc()
-            i = max(1, min(2048, serial_port.in_waiting))
-            data = serial_port.read(i)
-            i = data.find(b"\n")
-            if i >= 0:
-                line = self.buffers[index] + data[:i + 1]
-                self.buffers[index][0:] = data[i + 1:]
-                return line.decode("utf-8")
-            else:
-                self.buffers[index].extend(data)
+            if not self.interrupted:
+                i = max(1, min(2048, serial_port.in_waiting))
+                data = serial_port.read(i)
+                if len(data) > 0:
+                    i = data.find(b"\n")
+                    if i >= 0:
+                        line = self.buffers[index] + data[:i + 1]
+                        self.buffers[index][0:] = data[i + 1:]
+                        return line.decode("utf-8")
+                    else:
+                        self.buffers[index].extend(data)
+                else:
+                    time.sleep(0.1)
+        return ""
 
     def __port_looper__(self, index):
         self.logger.debug(">>" + str(self.ports[index]))
         self.buffers[index] = bytearray()
         port = self.ports[index]
+        serial_port = None
 
         while not self.interrupted:  # Not connected
             try:
@@ -106,14 +113,21 @@ class SerialReader(ModuleLooper):
                         self.__process_line__(index, line.strip())
                         time.sleep(0.001)
                 except serial.SerialException:
-                    self.logger.error("Unexpected Error!")
+                    self.logger.error("Unexpected Error (b)!")
                     traceback.print_exc()
                 finally:
+                    self.logger.info("(%s) Closing port (a)..." % self.ports[index])
                     serial_port.close()
+                    serial_port = None
             except:
                 self.logger.error("Cannot establish connection with " + port)
                 # traceback.print_exc()
                 time.sleep(2)
+
+        if serial_port is not None:
+            self.logger.info("(%s) Closing port (b)..." % self.ports[index])
+            serial_port.close()
+        self.logger.info("(%s) Exiting looper" % self.ports[index])
 
     def __process_line__(self, index, line):
         port = str(self.ports[index])
@@ -126,18 +140,29 @@ class SerialReader(ModuleLooper):
                 self.mode = 1
             elif line == ENQ:
                 self.logger.info("[" + port + "] ENQ: Identifying...")
-                serial_port.write((ACK + ":" + self.identifier + "\n").encode())
+                serial_port.reset_output_buffer()
+                try:
+                    serial_port.write((ACK + ":" + self.identifier + "\n").encode())
+                except SerialTimeoutException:
+                    self.logger.error("SerialTimeoutException (b)")
             elif self.mode == 1 and line == ETX:   # and self.receiving_serial_port == serial_port:
                 if self.receiving_serial_port == serial_port:
                     checksum = binascii.crc32(self.content)
-                    self.logger.info("[" + port + "] ETX: Message end - Checksum=" + str(checksum))
-                    serial_port.write(("ACK:" + str(checksum) + "\n").encode())
+                    self.logger.info("[" + port + "] ETX: Message end - Checksum=" + str(checksum)
+                                     + (" fast success" if self.fast_success else " waiting for confirmation"))
+                    serial_port.reset_output_buffer()
+                    try:
+                        serial_port.write(("ACK:" + str(checksum) + "\n").encode())
+                    except SerialTimeoutException:
+                        self.logger.error("SerialTimeoutException (b)")
                     if self.fast_success:
+                        self.logger.debug("FAST SUCCESS")
                         self.__write_result__()
                         self.mode = 0
                         self.receiving_serial_port = None
                         self.content = ""
                     else:
+                        self.logger.debug("WAITING FOR CONFIRMATION...")
                         self.mode = 2
                 else:
                     self.logger.info("[" + port + "] ETX: Starting over")
