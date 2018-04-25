@@ -44,7 +44,9 @@ class Commander(ModuleMQTT):
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
-        self.timer_map[check.command] = Timer(check.interval, self.trigger, [check]).start()
+        timer = Timer(check.interval, self.trigger, [check])
+        self.timer_map[check.command] = timer
+        timer.start()
 
     def __process_result(self, result):
         if result is not None and result != '':

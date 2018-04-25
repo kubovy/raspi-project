@@ -31,15 +31,15 @@ class Monitor(ModuleMQTT):
             Check("storage_root_free", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\3/g"', interval=3600),
             Check("storage_root_percent", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\s+([0-9]+)\\s+([0-9]+)%.*/\\4/g"', interval=3600),
             Check("cpu", 'expr $(top -b | head -n 5 | grep %Cpu | sed -E "s/.* ([0-9]+)[,.][0-9]+ us,\\s+([0-9]+)[,.][0-9]+ sy,\\s+ ([0-9]+)[,.][0-9]+ ni.*/\\1 + \\2 + \\3/g")'),
-            Check("load1", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\1/g"'),
+            Check("load1", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\1/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
             Check("load5", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\2/g"'),
-            Check("load15", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\3/g"'),
+            Check("load15", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\3/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
             Check("mem_total", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("mem_used", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("mem_free", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("mem_shared", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("mem_cache", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("mem_available", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
+            Check("mem_used", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
+            Check("mem_free", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"'),
+            Check("mem_shared", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\4/g"'),
+            Check("mem_cache", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\5/g"'),
+            Check("mem_available", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\6/g"'),
             Check("swap_total", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
             Check("swap_used", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
             Check("swap_free", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"')
@@ -57,7 +57,9 @@ class Monitor(ModuleMQTT):
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
-            self.timer_map[check.topic] = Timer(check.interval, self.trigger, [check]).start()
+        timer = Timer(check.interval, self.trigger, [check])
+        self.timer_map[check.topic] = timer
+        timer.start()
 
     def finalize(self):
         for key in self.timer_map.keys():
