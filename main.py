@@ -5,6 +5,9 @@
 #
 import sys
 import getopt
+import time
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
 from Logger import Logger
 from ModuleMQTT import *
@@ -85,6 +88,22 @@ gpio_modules = ["buzzer", "infrared-receiver", "infrared-sensor",  "joystick",  
                 "ultrasonic",  "water-detector",  "wheels"]
 gpio_loaded = False
 
+interrupted = False
+
+
+class FileWatcherHandler(FileSystemEventHandler):
+    def on_created(self, event):  # when file is created
+        global interrupted
+        if event.src_path == '/tmp/raspi-project.stop':
+            logger.debug(event.src_path + " created")
+            interrupted = True
+
+    def on_modified(self, event):
+        global interrupted
+        if event.src_path == '/tmp/raspi-project.stop':
+            logger.debug(event.src_path + " modified")
+            interrupted = True
+
 
 def initialize(module_names):
     global modules
@@ -124,6 +143,9 @@ def initialize(module_names):
                                     pin_c=joystick_pin_c,
                                     pin_d=joystick_pin_d,
                                     debug=debug))
+        elif module_name == "monitor":
+            from Monitor import Monitor
+            modules.append(Monitor(mqtt_client, client_id, debug=debug))
         elif module_name == "motion-detector":
             from MotionDetector import MotionDetector
             modules.append(MotionDetector(mqtt_client, client_id, pin=motion_detector_pin, debug=debug))
@@ -139,6 +161,9 @@ def initialize(module_names):
         elif module_name == "rgb":
             from RGB import RGB
             modules.append(RGB(mqtt_client, client_id, debug=debug))
+        elif module_name == "rpi":
+            from RPI import RPI
+            modules.append(RPI(mqtt_client, client_id, debug=debug))
         elif module_name == "serial-reader":
             from SerialReader import SerialReader
             modules.append(SerialReader(mqtt_client, client_id,
@@ -256,31 +281,54 @@ def looper():
     global logger
     global mqtt_client
 
+    observer = Observer()
+    event_handler = FileWatcherHandler()  # create event handler
+    observer.schedule(event_handler, path='/tmp')
+    observer.start()
+
     logger.info("Press [CTRL+C] to exit")
     try:
+        # set observer to use created handler in directory
+
         # Blocking call that processes network traffic, dispatches callbacks and
         # handles reconnecting.
         # Other loop*() functions are available that give a threaded interface and a
         # manual interface.
-        mqtt_client.loop_forever(retry_first_connection=True)
+        # mqtt_client.loop_forever(retry_first_connection=True)
+        mqtt_client.loop_start()
+
+        while not interrupted:
+            time.sleep(1)
     except KeyboardInterrupt:
         logger.error("Finishing up...")
     except:
         logger.error("Unexpected Error!")
         traceback.print_exc()
     finally:
+        logger.debug("Stopping file observer...")
+        observer.stop()
+        observer.join(1.0)
+
+        logger.debug("Stopping MQTT loop...")
+        mqtt_client.loop_stop()
+
         for module in modules:
             stop_method = getattr(module, "stop", None)
             if callable(stop_method):
                 stop_method()
 
         for module in modules:
+            logger.debug("Finalizing module %s..." % type(module))
             module.finalize()
 
         if gpio_loaded:
+            logger.debug("Cleaning up GPIO...")
             import RPi.GPIO as GPIO
             GPIO.cleanup()
         mqtt_client.publish("mutinus/state/status", "CLOSED", 1, True)
+        logger.debug("Disconnecting from MQTT broker...")
+        mqtt_client.disconnect()
+        logger.debug("Exiting looper...")
 
 
 def help():
@@ -297,10 +345,12 @@ Options:
       infrared-receiver : Infrared remote control receiver
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
+      monitor           : Target monitoring
       motion-detector   : Motion detector (HC-SR501 PIR)
       obstacle-avoidance: Obstacle avoidance
       pantilt           : PanTilt HAT
       pixels            : WS281x pixels
+      rpi               : Raspberry PI
       serial-reader     : Serial port reader
       rgb               : RGB Strip
       servo             : Camera servos
@@ -412,6 +462,7 @@ def main(argv):
 
     initialize(module_names)
     looper()
+    logger.debug("Finished")
 
 
 # The callback for when the client receives a CONNACK response from the server.
@@ -435,13 +486,15 @@ def on_disconnect(client, userdata, rc):
 # The callback for when a PUBLISH message is received from the server.
 # noinspection PyUnusedLocal
 def on_message(client, userdata, msg):
+    global interrupted
     try:
         logger.debug(msg.topic + ": '" + str(msg.payload) + "'")
         path = msg.topic.split("/")
         payload = msg.payload
-        if len(path) == 2 and path[1] == "control":
+        if len(path) == 2 and path[0] == client_id and path[1] == "control":
             if payload == "OFF":
-                mqtt_client.disconnect()
+                #  mqtt_client.disconnect()
+                interrupted = True
 #        if len(path) == 2 and path[1] == "last-will-sink":
 #            broker=msg.payload.split(":")
 #            broker_host = broker[0]

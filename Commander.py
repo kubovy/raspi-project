@@ -16,11 +16,13 @@ class Check(object):
 
 
 class Commander(ModuleMQTT):
+    timer_map = {}
+
     def __init__(self, client, service_name, checks=None, debug=False):
         super(Commander, self).__init__(client, service_name, "commander", debug)
         self.checks = [] if checks is None else checks
         for check in self.checks:
-            Timer(check.interval, self.trigger, [check]).start()
+            self.trigger(check)
 
     def on_message(self, path, payload):
         if len(path) > 0:                                                      # {service}/control/{module}
@@ -39,10 +41,10 @@ class Commander(ModuleMQTT):
                                       stdout=subprocess.PIPE,
                                       shell=True).communicate()[0].strip()
             self.__process_result(result)
-            Timer(check.interval, self.trigger, [check]).start()
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
+        self.timer_map[check.command] = Timer(check.interval, self.trigger, [check]).start()
 
     def __process_result(self, result):
         if result is not None and result != '':
@@ -53,3 +55,8 @@ class Commander(ModuleMQTT):
                 except:
                     self.logger.error("Unexpected Error!")
                     traceback.print_exc()
+
+    def finalize(self):
+        for key in self.timer_map.keys():
+            self.logger.debug("Timer " + key + " = " + str(self.timer_map[key]))
+            if self.timer_map[key] is not None: self.timer_map[key].cancel()
