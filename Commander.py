@@ -25,15 +25,20 @@ class Commander(ModuleMQTT):
             self.trigger(check)
 
     def on_message(self, path, payload):
-        if len(path) > 0:                                                      # {service}/control/{module}
-            try:
-                result = subprocess.Popen('/usr/local/bin/mqtt-cli ' + path.join(" ") + ' ' + payload,
-                                          stdout=subprocess.PIPE,
-                                          shell=True).communicate()[0].strip()
-                self.__process_result(result)
-            except:
-                self.logger.error("Unexpected Error!")
-                traceback.print_exc()
+        if len(path) > 0:                                                      # {service}/control/commander
+            if len(path) == 1 and path[0] == "shutdown":                       # {service}/control/commander/shutdown
+                subprocess.call(["shutdown", "now"])
+            elif len(path) == 1 and path[0] == "restart":                      # {service}/control/commander/restart
+                subprocess.call(["reboot"])
+            else:
+                try:
+                    result = subprocess.Popen('/usr/local/bin/mqtt-cli ' + path.join(" ") + ' ' + payload,
+                                              stdout=subprocess.PIPE,
+                                              shell=True).communicate()[0].strip()
+                    self.__process_result(result)
+                except:
+                    self.logger.error("Unexpected Error!")
+                    traceback.print_exc()
 
     def trigger(self, check):
         try:
