@@ -52,8 +52,10 @@ class RPI(ModuleMQTT):
         if len(path) == 1 and path[0] == "display":                           # {service}/control/commander/display
             if payload == "ON":
                 subprocess.call(["vcgencmd", "display_power", "1"])
+                self.publish("display", "ON", 1)
             else:
                 subprocess.call(["vcgencmd", "display_power", "0"])
+                self.publish("display", "ON", 1)
 
     def trigger(self, check):
         global timer_map
