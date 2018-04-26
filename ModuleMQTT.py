@@ -21,6 +21,8 @@ class ModuleMQTT(Module):
 
     def publish(self, topic, payload=None, qos=0, retrain=False):
         if topic != "": topic = "/" + topic
+        # self.logger.debug(self.service_name + "/state/" + self.module_name + topic
+        #                  + " qos=" + str(qos) + ", retain="  + str(retrain) + ": " + payload)
         self.client.publish(self.service_name + "/state/" + self.module_name + topic, payload, qos, retrain)
 
     def on_message(self, path, payload):

@@ -16,10 +16,11 @@ class EventHandler(pyinotify.ProcessEvent):
         self.process()
 
     def process(self):
-        state = "0"
+        state = "-1"
         if os.path.exists(self.camera.state_file):
             stream = open(self.camera.state_file, "r")
-            state = stream.readline()
+            state = stream.readline().strip()
+        # self.camera.logger.debug(self.camera.state_file + ": " + state)
         if state == "1":
             self.camera.publish("", "ON", 1, True)
         else:
@@ -30,7 +31,7 @@ class EventHandler(pyinotify.ProcessEvent):
         self.process()
 
     def process_IN_MODIFY(self, event):
-        self.camera.logger.info("Modifier: " + event.pathname)
+        self.camera.logger.info("Modified: " + event.pathname)
         self.process()
 
     def process_IN_DELETE(self, event):
@@ -40,7 +41,7 @@ class EventHandler(pyinotify.ProcessEvent):
 
 class Camera(ModuleMQTT):
     """
-    HC-SR501 PIR (https://www.mpja.com/download/31227sc.pdf)
+    Camera switcher
     """
 
     def __init__(self, client, service_name, state_file="/run/camera.state", debug=False):
