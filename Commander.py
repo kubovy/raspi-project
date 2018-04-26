@@ -30,11 +30,6 @@ class Commander(ModuleMQTT):
                 subprocess.call(["shutdown", "now"])
             elif len(path) == 1 and path[0] == "restart":                      # {service}/control/commander/restart
                 subprocess.call(["reboot"])
-            elif len(path) == 1 and path[0] == "display":  # {service}/control/commander/restart
-                if payload == "ON":
-                    subprocess.call(["vcgencmd", "display_power", "1"])
-                else:
-                    subprocess.call(["vcgencmd", "display_power", "0"])
             else:
                 try:
                     result = subprocess.Popen('/usr/local/bin/mqtt-cli ' + path.join(" ") + ' ' + payload,
