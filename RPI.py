@@ -43,7 +43,7 @@ class RPI(ModuleMQTT):
             Check("sdram_p_volt", "vcgencmd measure_volts sdram_p | sed -E 's/volt=([0-9]+\.[0-9]+)V/\\1/g'"),
             Check("arm_mem", 'vcgencmd get_mem arm | cut -d"=" -f2 | sed -E "s/([0-9]+).*/\\1/g"'),
             Check("gpu_mem", 'vcgencmd get_mem gpu | cut -d"=" -f2 | sed -E "s/([0-9]+).*/\\1/g"'),
-            Check("display", 'if [[ $(vcgencmd display_power | cut -d"=" -f2) == "1" ]]; then echo "ON"; else echo "OFF"; fi')
+            Check("display", 'bash -c "if [[ $(vcgencmd display_power | cut -d= -f2) == \'1\' ]]; then echo \'ON\'; else echo \'OFF\'; fi"', interval=1)
         ]
         for check in self.checks:
             self.trigger(check)
@@ -52,6 +52,7 @@ class RPI(ModuleMQTT):
         if len(path) == 1 and path[0] == "display":                           # {service}/control/commander/display
             if payload == "ON":
                 subprocess.call(["vcgencmd", "display_power", "1"])
+                subprocess.call(["xset", "s", "activate"])
                 self.publish("display", "ON", 1)
             else:
                 subprocess.call(["vcgencmd", "display_power", "0"])

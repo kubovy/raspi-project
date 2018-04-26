@@ -43,7 +43,7 @@ class Monitor(ModuleMQTT):
             Check("swap_total", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
             Check("swap_used", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
             Check("swap_free", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"'),
-            Check("backup_mount", 'if [[ $(mount | grep /backup) && $(ls /backup/.mounted 2> /dev/null) ]]; then echo "OPEN"; else echo "CLOSED"; fi')
+            Check("backup_mount", 'bash -c "if [[ \\$(mount | grep /backup) && \\$(ls /backup/.mounted 2> /dev/null) ]]; then echo \'OPEN\'; else echo \'CLOSED\'; fi"')
         ]
         for check in self.checks:
             self.trigger(check)
