@@ -24,7 +24,7 @@ class Monitor(ModuleMQTT):
     def __init__(self, client, service_name, debug=False):
         super(Monitor, self).__init__(client, service_name, "monitor", debug)
         self.checks = [
-            Check("uptime", 'uptime -p | sed -E "s/up ([0-9]+) days?, ([0-9]+) hours?, ([0-9]+) minutes?/\\1:\\2:\\3:00/g"'),
+            Check("uptime", 'uptime -p'),
             Check("users", 'uptime | sed -E "s/.*([0-9]+) users?.*/\\1/g"'),
             Check("storage_root_size", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\1/g"', interval=86400),
             Check("storage_root_used", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\2/g"', interval=3600),
