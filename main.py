@@ -27,6 +27,10 @@ camera_state_file = "/run/camera.state"
 # Commander
 commander_checks = None
 
+# DHT11
+dht11_pin      = 4
+dht11_interval = 60
+
 # Infraread Receiver
 ir_receiver_pin = 17
 
@@ -128,6 +132,9 @@ def initialize(module_names):
             checks = None if commander_checks is None else map(lambda p: Check(p[0], int(p[1])),
                                                                map(lambda s: s.split(":"), commander_checks.split(",")))
             modules.append(Commander(mqtt_client, client_id, checks=checks, debug=debug))
+        elif module_name == "dht11":
+            from DHT11 import DHT11
+            modules.append(DHT11(mqtt_client, client_id, pin=dht11_pin, interval=dht11_interval, debug=debug))
         elif module_name == "infrared-receiver":
             from InfraredReceiver import InfraredReceiver
             modules.append(InfraredReceiver(mqtt_client, client_id, pin=ir_receiver_pin, debug=debug))
@@ -342,6 +349,7 @@ Options:
       buzzer            : Buzzer
       camera            : Camera
       commander         : Commander
+      dht11             : DHT11 Temperature and Humidity sensor
       infrared-receiver : Infrared remote control receiver
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
@@ -362,6 +370,10 @@ Options:
 
 Commander
   --commander-checks command1:interval1[,command2:interval2[,...]]
+
+DHT11
+  --dht11-pin pin                            DHT11 pin
+  --dht11-interval interval                  Refresh interval in seconds
 
 Motion Detector
   --motion-detector-pin pin                  Motion detector pin
@@ -390,6 +402,7 @@ def main(argv):
     global mqtt_client
     global client_id
     global commander_checks
+    global dht11_pin, dht11_interval
     global motion_detector_pin
     global serial_reader_start, serial_reader_ports
     global water_detector_pin
@@ -402,6 +415,7 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hdb:m:", [
             "help", "debug", "broker=", "module=",
             "commander-checks=",
+            "dht11-pin=", "dht11-interval",
             "motion-detector-pin=",
             "water-detector-pin=",
             "serial-reader-start", "serial-reader-ports=",
@@ -430,6 +444,10 @@ def main(argv):
                 module_names.append(module_name)
         elif opt == "--commander-checks":
             commander_checks = arg
+        elif opt == "--dht11-pin":
+            dht11_pin = int(arg)
+        elif opt == "--dht11-interval":
+            dht11_interval = float(arg)
         elif opt == "--motion-detector-pin":
             motion_detector_pin = int(arg)
         elif opt == "--serial-reader-start":
