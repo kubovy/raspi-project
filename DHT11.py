@@ -12,7 +12,7 @@ from ModuleMQTT import ModuleMQTT
 class DHT11(ModuleMQTT):
     timer = None
 
-    def __init__(self, client, service_name, pin=4, interval= 60, debug=False):
+    def __init__(self, client, service_name, pin=4, interval=60, debug=False):
         super(DHT11, self).__init__(client, service_name, "dht11", debug)
         self.pin = pin
         self.interval = interval
