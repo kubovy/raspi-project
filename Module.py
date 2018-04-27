@@ -7,9 +7,10 @@ from Logger import Logger
 
 
 class Module(object):
+    finalizing = False
 
     def __init__(self, debug=False):
         self.logger = Logger(type(self).__name__, debug)
 
     def finalize(self):
-        pass
+        self.finalizing = True

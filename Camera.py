@@ -62,5 +62,6 @@ class Camera(ModuleMQTT):
             call(["/usr/local/bin/mjpeg-streamer", "stop"])
 
     def finalize(self):
+        super(Camera, self).finalize()
         self.watch_manager.rm_watch(self.wdd.values())
         self.notifier.stop()

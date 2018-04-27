@@ -3,6 +3,7 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
+import os
 import subprocess
 import traceback
 from threading import *
@@ -52,7 +53,9 @@ class RPI(ModuleMQTT):
         if len(path) == 1 and path[0] == "display":                           # {service}/control/commander/display
             if payload == "ON":
                 subprocess.call(["vcgencmd", "display_power", "1"])
-                subprocess.call(["xset", "s", "activate"])
+                my_env = os.environ.copy()
+                my_env["DISPLAY"] = ":0.0"
+                subprocess.Popen(["sudo", "-u", "pi", "xset", "s", "activate"], env=my_env)
                 self.publish("display", "ON", 1)
             else:
                 subprocess.call(["vcgencmd", "display_power", "0"])
@@ -69,11 +72,13 @@ class RPI(ModuleMQTT):
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
-        timer = Timer(check.interval, self.trigger, [check])
-        self.timer_map[check.topic] = timer
-        timer.start()
+        if not self.finalizing:
+            timer = Timer(check.interval, self.trigger, [check])
+            self.timer_map[check.topic] = timer
+            timer.start()
 
     def finalize(self):
+        super(RPI, self).finalize()
         for key in self.timer_map.keys():
             self.logger.debug("Timer " + key + " = " + str(self.timer_map[key]))
             if self.timer_map[key] is not None: self.timer_map[key].cancel()

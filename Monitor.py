@@ -58,11 +58,13 @@ class Monitor(ModuleMQTT):
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
-        timer = Timer(check.interval, self.trigger, [check])
-        self.timer_map[check.topic] = timer
-        timer.start()
+        if not self.finalizing:
+            timer = Timer(check.interval, self.trigger, [check])
+            self.timer_map[check.topic] = timer
+            timer.start()
 
     def finalize(self):
+        super(Monitor, self).finalize()
         for key in self.timer_map.keys():
             self.logger.debug("Timer " + key + " = " + str(self.timer_map[key]))
             if self.timer_map[key] is not None: self.timer_map[key].cancel()

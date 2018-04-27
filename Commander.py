@@ -49,9 +49,10 @@ class Commander(ModuleMQTT):
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
-        timer = Timer(check.interval, self.trigger, [check])
-        self.timer_map[check.command] = timer
-        timer.start()
+        if not self.finalizing:
+            timer = Timer(check.interval, self.trigger, [check])
+            self.timer_map[check.command] = timer
+            timer.start()
 
     def __process_result(self, result):
         if result is not None and result != '':
@@ -64,6 +65,7 @@ class Commander(ModuleMQTT):
                     traceback.print_exc()
 
     def finalize(self):
+        super(Commander, self).finalize()
         for key in self.timer_map.keys():
             self.logger.debug("Timer " + key + " = " + str(self.timer_map[key]))
             if self.timer_map[key] is not None: self.timer_map[key].cancel()

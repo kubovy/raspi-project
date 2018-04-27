@@ -81,5 +81,6 @@ class RGB(ModuleLooper):
             self.set_color(update=True)
 
     def finalize(self):
+        super(RGB, self).finalize()
         self.pi.stop()
 
