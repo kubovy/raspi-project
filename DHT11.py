@@ -46,5 +46,3 @@ class DHT11(ModuleMQTT):
     def finalize(self):
         super(DHT11, self).finalize()
         if self.timer is not None: self.timer.cancel()
-
-
