@@ -4,6 +4,7 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import Adafruit_DHT
+import time
 from threading import *
 import traceback
 from ModuleMQTT import ModuleMQTT
@@ -38,6 +39,7 @@ class DHT11(ModuleMQTT):
         self.logger.debug("Temperature=" + str(temperature) + ", Humidity=" + str(humidity))
         self.publish("humidity", str(humidity), 1, True)
         self.publish("temperature", str(temperature), 1, True)
+        self.publish("last-update", str(int(round(time.time()))))
 
         if not self.finalizing:
             self.timer = Timer(self.interval, self.trigger)

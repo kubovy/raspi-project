@@ -17,6 +17,7 @@ class Check(object):
 
 class Commander(ModuleMQTT):
     timer_map = {}
+    last_values = {}
 
     def __init__(self, client, service_name, checks=None, debug=False):
         super(Commander, self).__init__(client, service_name, "commander", debug)
@@ -59,7 +60,9 @@ class Commander(ModuleMQTT):
             for line in result.splitlines():
                 try:
                     parts = line.split(":", 1)
-                    self.publish(parts[0], parts[1], 1)
+                    if parts[0] not in self.last_values.keys() or parts[1] != self.last_values[parts[0]]:
+                        self.last_values[parts[0]] = parts[1]
+                        self.publish(parts[0], parts[1], 1)
                 except:
                     self.logger.error("Unexpected Error!")
                     traceback.print_exc()

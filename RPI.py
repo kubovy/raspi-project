@@ -21,6 +21,7 @@ class Check(object):
 
 class RPI(ModuleMQTT):
     timer_map = {}
+    last_values = {}
 
     def __init__(self, client, service_name, debug=False):
         super(RPI, self).__init__(client, service_name, "rpi", debug)
@@ -43,9 +44,16 @@ class RPI(ModuleMQTT):
             Check("sdram_i_volt", "vcgencmd measure_volts sdram_i | sed -E 's/volt=([0-9]+\.[0-9]+)V/\\1/g'"),
             Check("sdram_p_volt", "vcgencmd measure_volts sdram_p | sed -E 's/volt=([0-9]+\.[0-9]+)V/\\1/g'"),
             Check("arm_mem", 'vcgencmd get_mem arm | cut -d"=" -f2 | sed -E "s/([0-9]+).*/\\1/g"'),
-            Check("gpu_mem", 'vcgencmd get_mem gpu | cut -d"=" -f2 | sed -E "s/([0-9]+).*/\\1/g"'),
-            Check("display", 'bash -c "if [[ $(vcgencmd display_power | cut -d= -f2) == \'1\' ]]; then echo \'ON\'; else echo \'OFF\'; fi"', interval=1)
+            Check("gpu_mem", 'vcgencmd get_mem gpu | cut -d"=" -f2 | sed -E "s/([0-9]+).*/\\1/g"')
+
         ]
+        if subprocess.Popen("raspi-config nonint get_boot_cli",
+                            stdout=subprocess.PIPE,
+                            shell=True).communicate()[0].strip() == "1":
+            self.checks.append(Check("display",
+                                     'bash -c "if [[ $(vcgencmd display_power | cut -d= -f2) == \'1\' ]]; then echo \'ON\'; else echo \'OFF\'; fi"',
+                                     interval=1))
+
         for check in self.checks:
             self.trigger(check)
 
@@ -68,7 +76,9 @@ class RPI(ModuleMQTT):
             result = subprocess.Popen(check.command,
                                       stdout=subprocess.PIPE,
                                       shell=True).communicate()[0].strip()
-            self.publish(check.topic, result, check.qos, check.retain)
+            if check.topic not in self.last_values.keys() or result != self.last_values[check.topic]:
+                self.last_values[check.topic] = result
+                self.publish(check.topic, result, check.qos, check.retain)
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()

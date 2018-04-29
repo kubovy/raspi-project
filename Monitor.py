@@ -20,6 +20,7 @@ class Check(object):
 
 class Monitor(ModuleMQTT):
     timer_map = {}
+    last_values = {}
 
     def __init__(self, client, service_name, debug=False):
         super(Monitor, self).__init__(client, service_name, "monitor", debug)
@@ -54,7 +55,9 @@ class Monitor(ModuleMQTT):
             result = subprocess.Popen(check.command,
                                       stdout=subprocess.PIPE,
                                       shell=True).communicate()[0].strip()
-            self.publish(check.topic, result, check.qos, check.retain)
+            if check.topic not in self.last_values.keys() or result != self.last_values[check.topic]:
+                self.last_values[check.topic] = result
+                self.publish(check.topic, result, check.qos, check.retain)
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
