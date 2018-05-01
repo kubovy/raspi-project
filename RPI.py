@@ -67,7 +67,7 @@ class RPI(ModuleMQTT):
                 self.publish("display", "ON", 1)
             else:
                 subprocess.call(["vcgencmd", "display_power", "0"])
-                self.publish("display", "ON", 1)
+                self.publish("display", "OFF", 1)
 
     def trigger(self, check):
         global timer_map
