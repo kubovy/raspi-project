@@ -54,9 +54,7 @@ class ObstacleAvoidance(ModuleMQTT):
 
     def __init__(self, client, service_name, debug=False):
         super(ObstacleAvoidance, self).__init__(client, service_name, "obstacle-avoidance", debug)
-
-        self.client.publish(self.service_name + "/state/obstacle-avoidance", "OFF", 1, True)
-        self.client.message_callback_add(self.service_name + "/control/obstacle-avoidance/#", self.on_message)
+        self.publish("obstacle-avoidance", "OFF", 1, True)
 
     def on_message(self, path, payload):
         if len(path) == 0:
@@ -143,7 +141,7 @@ class ObstacleAvoidance(ModuleMQTT):
                 self.last_distance = distance
                 self.distances.append(distance)
                 threading.Timer(1.0, self.update_wheels).start()
-            else: # Distance not acquired, try again
+            else:  # Distance not acquired, try again
                 self.left_speed = self.right_speed = 0
                 self.interval = 0
                 threading.Timer(1.0, self.update_wheels).start()
@@ -170,7 +168,7 @@ class ObstacleAvoidance(ModuleMQTT):
         #    self.interrupted = False
         #    self.thread = threading.Thread(target=self.looper)
         #    self.thread.start()
-        self.client.publish(self.service_name + "/state/obstacle-avoidance", "ON", 1, True)
+        self.publish("obstacle-avoidance", "ON", 1, True)
         if self.infrared_subscription is None and self.infrared_sensor is not None:
             self.infrared_subscription = self.infrared_sensor.subscribe(lambda state: self.on_infrared_distance(state))
         if self.ultrasonic_subscription is None and self.ultrasonic is not None:
@@ -183,7 +181,7 @@ class ObstacleAvoidance(ModuleMQTT):
         # if self.thread is not None:
         #    self.thread.join(5)
         # self.thread = None
-        self.client.publish(self.service_name + "/state/obstacle-avoidance", "OFF", 1, True)
+        self.publish("obstacle-avoidance", "OFF", 1, True)
         if self.infrared_subscription is not None:
             self.infrared_subscription.dispose()
             self.infrared_subscription = None
