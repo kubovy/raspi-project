@@ -25,26 +25,26 @@ class Monitor(ModuleMQTT):
     def __init__(self, client, service_name, debug=False):
         super(Monitor, self).__init__(client, service_name, "monitor", debug)
         self.checks = [
-            Check("uptime", 'uptime -p'),
-            Check("users", 'uptime | sed -E "s/.*([0-9]+) users?.*/\\1/g"'),
-            Check("storage_root_size", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\1/g"', interval=86400),
-            Check("storage_root_used", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\2/g"', interval=3600),
-            Check("storage_root_free", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\3/g"', interval=3600),
-            Check("storage_root_percent", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\s+([0-9]+)\\s+([0-9]+)%.*/\\4/g"', interval=3600),
-            Check("cpu", 'expr $(top -b | head -n 5 | grep %Cpu | sed -E "s/.* ([0-9]+)[,.][0-9]+ us,\\s+([0-9]+)[,.][0-9]+ sy,\\s+ ([0-9]+)[,.][0-9]+ ni.*/\\1 + \\2 + \\3/g")'),
-            Check("load1", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\1/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
-            Check("load5", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\2/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
-            Check("load15", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\3/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
-            Check("mem_total", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("mem_used", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
-            Check("mem_free", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"'),
-            Check("mem_shared", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\4/g"'),
-            Check("mem_cache", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\5/g"'),
-            Check("mem_available", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\6/g"'),
-            Check("swap_total", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
-            Check("swap_used", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
-            Check("swap_free", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"'),
-            Check("backup_mount", 'bash -c "if [[ \\$(mount | grep /backup) && \\$(ls /backup/.mounted 2> /dev/null) ]]; then echo \'OPEN\'; else echo \'CLOSED\'; fi"')
+            # Check("uptime", 'uptime -p'),
+            # Check("users", 'uptime | sed -E "s/.*([0-9]+) users?.*/\\1/g"'),
+            # Check("storage_root_size", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\1/g"', interval=86400),
+            # Check("storage_root_used", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\2/g"', interval=3600),
+            # Check("storage_root_free", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)%.*/\\3/g"', interval=3600),
+            # Check("storage_root_percent", 'df | grep "% /$" | sed -E "s/[^0-9]+([0-9]+)\\s+([0-9]+)\s+([0-9]+)\\s+([0-9]+)%.*/\\4/g"', interval=3600),
+            # Check("cpu", 'expr $(top -b | head -n 5 | grep %Cpu | sed -E "s/.* ([0-9]+)[,.][0-9]+ us,\\s+([0-9]+)[,.][0-9]+ sy,\\s+ ([0-9]+)[,.][0-9]+ ni.*/\\1 + \\2 + \\3/g")'),
+            # Check("load1", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\1/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
+            # Check("load5", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\2/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
+            # Check("load15", 'uptime | sed -E "s/.*load average: ([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)[,.]\\s*([0-9]+[,.][0-9]+)/\\3/g" | sed -E "s/([0-9]+)[,.]([0-9]+)/\\1.\\2/g"'),
+            # Check("mem_total", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
+            # Check("mem_used", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
+            # Check("mem_free", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"'),
+            # Check("mem_shared", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\4/g"'),
+            # Check("mem_cache", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\5/g"'),
+            # Check("mem_available", 'free | grep Mem: | sed -E "s/Mem:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\6/g"'),
+            # Check("swap_total", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\1/g"'),
+            # Check("swap_used", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\2/g"'),
+            # Check("swap_free", 'free | grep Swap | sed -E "s/Swap:\\s+([0-9]+)\\s+([0-9]+)\\s+([0-9]+).*/\\3/g"'),
+            # Check("backup_mount", 'bash -c "if [[ \\$(mount | grep /backup) && \\$(ls /backup/.mounted 2> /dev/null) ]]; then echo \'OPEN\'; else echo \'CLOSED\'; fi"')
         ]
         for check in self.checks:
             self.trigger(check)
