@@ -65,6 +65,9 @@ servo_pitch_mid = 2100
 servo_pitch_max = 2800
 # servo_pitch_deg = servo_roll_deg
 
+# State Machine
+state_machine_description_file = "state-machine.yml"
+
 # Ultrasonic
 ultrasonic_pin_trigger = 22
 ultrasonic_pin_echo    = 27
@@ -184,6 +187,9 @@ def initialize(module_names):
                                  servo_maxs=[servo_roll_max, servo_pitch_max],
                                  degree_span=180.0,
                                  debug=debug))
+        elif module_name == "state-machine":
+            from StateMachine import StateMachine
+            modules.append(StateMachine(mqtt_client, client_id, state_machine_description_file, debug=debug))
         elif module_name == "tracking-sensor":
             from TrackingSensor import TrackingSensor
             modules.append(TrackingSensor(mqtt_client, client_id, debug=debug))
@@ -366,6 +372,7 @@ Options:
       serial-reader     : Serial port reader
       rgb               : RGB Strip
       servo             : Camera servos
+      state-machine     : State machine
       tracking-sensor   : Tracking sensor
       ultrasonic        : Ultrasonic distance sensor
       water-detector    : Water detector (Flying Fish MH Sensor)
@@ -410,6 +417,7 @@ def main(argv):
     global dht11_pin, dht11_interval
     global motion_detector_pin
     global serial_reader_start, serial_reader_ports
+    global state_machine_description_file
     global water_detector_pin
     global ws281x_start, ws281x_startup_file, ws281x_led_count, ws281x_row_led_count, ws281x_row_count, ws281x_reverse
 
@@ -424,6 +432,7 @@ def main(argv):
             "motion-detector-pin=",
             "water-detector-pin=",
             "serial-reader-start", "serial-reader-ports=",
+            "state-machine-description="
             "ws281x-start", "ws281x-startup-file=", "ws281x-reverse",
             "ws281x-led-count=", "ws281x-row-led-count=", "ws281x-row-count="])
     except getopt.GetoptError:
@@ -459,6 +468,8 @@ def main(argv):
             serial_reader_start = True
         elif opt == "--serial-reader-ports":
             serial_reader_ports = arg.split(",")
+        elif opt == "--state-machine-description":
+            state_machine_description_file = arg
         elif opt == "--water-detector-pin":
             water_detector_pin = int(arg)
         elif opt == "--ws281x-start":
