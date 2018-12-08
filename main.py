@@ -44,6 +44,9 @@ joystick_pin_b      = 9
 joystick_pin_c      = 10
 joystick_pin_d      = 11
 
+# MCP23017
+mcp23017_start = False
+
 # Motion Detector
 motion_detector_pin = 7
 
@@ -156,6 +159,9 @@ def initialize(module_names):
         elif module_name == "lcd":
             from LCD import LCD
             modules.append(LCD(mqtt_client, client_id, debug=debug))
+        elif module_name == "mcp23017":
+            from MCP23017 import MCP23017
+            modules.append(MCP23017(mqtt_client, client_id, debug=debug))
         elif module_name == "monitor":
             from Monitor import Monitor
             modules.append(Monitor(mqtt_client, client_id, debug=debug))
@@ -281,6 +287,11 @@ def initialize(module_names):
 
     for module in modules:
         autostart = False
+
+        if mcp23017_start:
+            from MCP23017 import MCP23017
+            if isinstance(module, MCP23017):
+                autostart = True
         if serial_reader_start:
             from SerialReader import SerialReader
             if isinstance(module, SerialReader):
@@ -367,6 +378,7 @@ Options:
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
       lcd               : LCD
+      mcp23017          : MCP23017
       monitor           : Target monitoring
       motion-detector   : Motion detector (HC-SR501 PIR)
       obstacle-avoidance: Obstacle avoidance
@@ -390,6 +402,9 @@ Commander
 DHT11
   --dht11-pin pin                            DHT11 pin
   --dht11-interval interval                  Refresh interval in seconds
+
+MCP23017
+  --mcp23017-start                           Start right away
 
 Motion Detector
   --motion-detector-pin pin                  Motion detector pin
@@ -419,6 +434,7 @@ def main(argv):
     global client_id
     global commander_checks
     global dht11_pin, dht11_interval
+    global mcp23017_start
     global motion_detector_pin
     global serial_reader_start, serial_reader_ports
     global state_machine_description_file
@@ -433,6 +449,7 @@ def main(argv):
             "help", "debug", "broker=", "module=",
             "commander-checks=",
             "dht11-pin=", "dht11-interval",
+            "mcp23017-start",
             "motion-detector-pin=",
             "water-detector-pin=",
             "serial-reader-start", "serial-reader-ports=",
@@ -466,6 +483,8 @@ def main(argv):
             dht11_pin = int(arg)
         elif opt == "--dht11-interval":
             dht11_interval = float(arg)
+        elif opt == "--mcp23017-start":
+            mcp23017_start = True
         elif opt == "--motion-detector-pin":
             motion_detector_pin = int(arg)
         elif opt == "--serial-reader-start":
