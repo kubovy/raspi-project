@@ -28,6 +28,8 @@ class MCP23017(ModuleLooper):
         [0xFF, 0x07]
     ]
 
+    state_machine = None
+
     def __init__(self, client, service_name, debug=False):
         super(MCP23017, self).__init__(client, service_name, "mcp23017", debug)
 
@@ -101,9 +103,11 @@ class MCP23017(ModuleLooper):
                     if current != cache:
                         address = "{:02x}".format(self.DEVICES[int(math.floor(idx / 2.0))])
                         part = "AB"[idx % 2]
-                        self.logger.debug("BTN[" + address + "/" + str(part) + "/" + str(bit) + "]" +
-                                          "(" + str(idx * 8 + bit) + "): " + str(cache) + " -> " + str(current))
+                        self.logger.debug("" + address + "/" + str(part) + "/" + str(bit) +
+                                          " [" + str(idx * 8 + bit) + "]: " + str(cache) + " -> " + str(current))
                         self.publish("state/" + str(idx * 8 + bit), "ON" if current else "OFF")
+                        if self.state_machine is not None:
+                            self.state_machine.set_state("mcp23017", idx * 8 + bit, current)
                 self.input_cache[idx] = buttons
 
         # if changed:

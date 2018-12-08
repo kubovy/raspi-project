@@ -12,11 +12,11 @@ from watchdog.events import FileSystemEventHandler
 from Logger import Logger
 from ModuleMQTT import *
 
-debug          = False
-logger         = Logger("MAIN", debug)
-mqtt_client    = None
-client_id      = None
-modules        = []
+debug = False
+logger = Logger("MAIN", debug)
+mqtt_client = None
+client_id = None
+modules = []
 
 # Buzzer
 buzzer_pin = 4
@@ -28,7 +28,7 @@ camera_state_file = "/run/camera.state"
 commander_checks = None
 
 # DHT11
-dht11_pin      = 4
+dht11_pin = 4
 dht11_interval = 60
 
 # Infraread Receiver
@@ -39,10 +39,10 @@ ir_sensor_pins = [19, 16]
 
 # Joystick
 joystick_pin_center = 7
-joystick_pin_a      = 8
-joystick_pin_b      = 9
-joystick_pin_c      = 10
-joystick_pin_d      = 11
+joystick_pin_a = 8
+joystick_pin_b = 9
+joystick_pin_c = 10
+joystick_pin_d = 11
 
 # MCP23017
 mcp23017_start = False
@@ -51,7 +51,7 @@ mcp23017_start = False
 motion_detector_pin = 7
 
 # Pixels
-pixels_pin   = 18
+pixels_pin = 18
 pixels_count = 4
 
 # Serial Reader
@@ -69,22 +69,23 @@ servo_pitch_max = 2800
 # servo_pitch_deg = servo_roll_deg
 
 # State Machine
+state_machine_start = True
 state_machine_description_file = "state-machine.yml"
 
 # Ultrasonic
 ultrasonic_pin_trigger = 22
-ultrasonic_pin_echo    = 27
+ultrasonic_pin_echo = 27
 
 # Water Detector
 water_detector_pin = 23
 
 # Wheels
-wheels_pin_right_forward  = 13
+wheels_pin_right_forward = 13
 wheels_pin_right_backward = 12
-wheels_pin_right_enabled  = 6
-wheels_pin_left_forward   = 21
-wheels_pin_left_backward  = 20
-wheels_pin_left_enabled   = 26
+wheels_pin_right_enabled = 6
+wheels_pin_left_forward = 21
+wheels_pin_left_backward = 20
+wheels_pin_left_enabled = 26
 
 # WS281x
 ws281x_start = False
@@ -251,9 +252,15 @@ def initialize(module_names):
         if hasattr(module, "joystick"):
             from Joystick import Joystick
             module.joystick = next((i for i in modules if isinstance(i, Joystick)), None)
+        if hasattr(module, "lcd"):
+            from LCD import LCD
+            module.lcd = next((i for i in modules if isinstance(i, LCD)), None)
+        if hasattr(module, "mcp23017"):
+            from MCP23017 import MCP23017
+            module.mcp23017 = next((i for i in modules if isinstance(i, MCP23017)), None)
         if hasattr(module, "motion_detector"):
             from MotionDetector import MotionDetector
-            modules.motion_detector = next((i for i in modules if isinstance(i, MotionDetector)), None)
+            module.motion_detector = next((i for i in modules if isinstance(i, MotionDetector)), None)
         if hasattr(module, "obstacle_avoidance"):
             from ObstacleAvoidance import ObstacleAvoidance
             module.obstacle_avoidance = next((i for i in modules if isinstance(i, ObstacleAvoidance)), None)
@@ -269,6 +276,9 @@ def initialize(module_names):
         if hasattr(module, "servo"):
             from Servo import Servo
             module.servo = next((i for i in modules if isinstance(i, Servo)), None)
+        if hasattr(module, "state_machine"):
+            from StateMachine import StateMachine
+            module.state_machine = next((i for i in modules if isinstance(i, StateMachine)), None)
         if hasattr(module, "tracking_sensor"):
             from TrackingSensor import TrackingSensor
             module.tracking_sensor = next((i for i in modules if isinstance(i, TrackingSensor)), None)
@@ -284,6 +294,9 @@ def initialize(module_names):
         if hasattr(module, "ws281x"):
             from WS281x import WS281x
             module.ws281x = next((i for i in modules if isinstance(i, WS281x)), None)
+        if hasattr(module, "ws281x_indicators"):
+            from WS281xIndicators import WS281xIndicators
+            module.ws281x_indicators = next((i for i in modules if isinstance(i, WS281xIndicators)), None)
 
     for module in modules:
         autostart = False
@@ -295,6 +308,10 @@ def initialize(module_names):
         if serial_reader_start:
             from SerialReader import SerialReader
             if isinstance(module, SerialReader):
+                autostart = True
+        if state_machine_start:
+            from StateMachine import StateMachine
+            if isinstance(module, StateMachine):
                 autostart = True
         if ws281x_start:
             from WS281x import WS281x
@@ -453,7 +470,7 @@ def main(argv):
             "motion-detector-pin=",
             "water-detector-pin=",
             "serial-reader-start", "serial-reader-ports=",
-            "state-machine-description="
+            "state-machine-description=",
             "ws281x-start", "ws281x-startup-file=", "ws281x-reverse",
             "ws281x-led-count=", "ws281x-row-led-count=", "ws281x-row-count="])
     except getopt.GetoptError:
@@ -504,7 +521,7 @@ def main(argv):
         elif opt == "--ws281x-reverse":
             ws281x_reverse = True
         elif opt == "--ws281x-row-led-count":
-            ws281x_row_led_count = (arg)
+            ws281x_row_led_count = arg
         elif opt == "--ws281x-row-count":
             ws281x_row_count = int(arg)
 

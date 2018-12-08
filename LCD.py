@@ -88,16 +88,14 @@ class LCD(ModuleMQTT):
             self.backlight(payload)
         elif len(path) == 1:
             try:
-                self.display_string(payload, int(path[0]))
+                self.set_line(payload, int(path[0]))
             except:
                 self.logger.error('Oops!')
                 traceback.print_exc()
         else:
             try:
                 self.logger.debug("MESSAGE: " + payload)
-                for i, line in enumerate(payload.splitlines()):
-                    if i < self.rows:
-                        self.display_string(line, i + 1)
+                self.set(payload)
             except:
                 self.logger.error('Oops!')
                 traceback.print_exc()
@@ -135,8 +133,12 @@ class LCD(ModuleMQTT):
         else:
             print("Unknown State!")
 
-    # put string function
-    def display_string(self, string, line):
+    def set(self, string):
+        for i, line in enumerate(string.splitlines()):
+            if i < self.rows:
+                self.set_line(line, i + 1)
+
+    def set_line(self, string, line):
         if line == 1:
             self.write(0x80)
         if line == 2:

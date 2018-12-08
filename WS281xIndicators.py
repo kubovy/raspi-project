@@ -4,6 +4,7 @@
 #
 # Direct port of the Arduino NeoPixel library strandtest example.  Showcases
 # various animations on a strip of NeoPixels.
+import ast
 import json
 import math
 from neopixel import *
@@ -33,11 +34,11 @@ def to_configs(data):
     configs = []
     for item in data:
         config = Config()
-        if 'pattern' in item.keys(): config.pattern = item['pattern']
+        config.pattern = item['pattern'] if 'pattern' in item.keys() else 'light'
         config.color = to_color(item['color']) if 'color' in item.keys() else None
-        if 'wait' in item.keys(): config.wait = item['wait']
-        if 'min' in item.keys(): config.min = item['min']
-        if 'max' in item.keys(): config.max = item['max']
+        config.wait = item['wait'] if 'wait' in item.keys() else 50
+        config.min = item['min'] if 'min' in item.keys() else 0
+        config.max = item['max'] if 'max' in item.keys() else 0
         configs.append(config)
     return configs
 
@@ -82,6 +83,22 @@ class WS281xIndicators(ModuleLooper):
                                        self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
         # Intialize the library (must be called once before other functions).
         self.strip.begin()
+        for led in range(self.led_count):
+            self.strip.setPixelColor(led, Color(0, 0, 0))
+            self.strip.show()
+
+    def set(self, index, payload):
+        self.logger.debug("Setting " + str(index) + " to " + str(payload) + " " + str(type(payload)))
+        if isinstance(payload, basestring):
+            try:
+                data = json.loads("[" + payload + "]")
+            except ValueError:
+                data = [ast.literal_eval(payload)]
+
+        else:
+            data = [payload]
+
+        self.data[index] = to_configs(data)
 
     def on_start(self):
         if self.serial_reader is not None:
@@ -94,8 +111,7 @@ class WS281xIndicators(ModuleLooper):
     def on_message(self, path, payload):
         if len(path) == 1:
             try:
-                index = int(path[0])
-                self.data[index] = to_configs(json.loads("[" + payload + "]"))
+                self.set(int(path[0]), payload)
             except ValueError:
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
@@ -124,6 +140,7 @@ class WS281xIndicators(ModuleLooper):
             traceback.print_exc()
 
     def looper(self):
+        self.logger.debug("Starting looper")
         iteration = 0
 
         # lastRestartChange = os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0
@@ -161,14 +178,12 @@ class WS281xIndicators(ModuleLooper):
                                           int(float((config.color & 255)) * factor))
                             self.strip.setPixelColor(led, color)
 
-
                         elif config.pattern == 'blink':
                             on = math.floor(iteration * self.LOOP_WAIT / config.wait) % 2 == 0
                             self.strip.setPixelColor(led, config.color if on else 0)
                         else:
                             self.strip.setPixelColor(led, config.color)
 
-            self.strip.setPixelColor(1, Color(255, 0, 0))
             self.strip.show()
 
             time.sleep(self.LOOP_WAIT / 1000.0)
