@@ -153,6 +153,9 @@ def initialize(module_names):
                                     pin_c=joystick_pin_c,
                                     pin_d=joystick_pin_d,
                                     debug=debug))
+        elif module_name == "lcd":
+            from LCD import LCD
+            modules.append(LCD(mqtt_client, client_id, debug=debug))
         elif module_name == "monitor":
             from Monitor import Monitor
             modules.append(Monitor(mqtt_client, client_id, debug=debug))
@@ -363,6 +366,7 @@ Options:
       infrared-receiver : Infrared remote control receiver
       infrared-sensor   : Infrared distance sensor
       joystick          : Joystick
+      lcd               : LCD
       monitor           : Target monitoring
       motion-detector   : Motion detector (HC-SR501 PIR)
       obstacle-avoidance: Obstacle avoidance
