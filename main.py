@@ -215,6 +215,9 @@ def initialize(module_names):
                                   row_count=ws281x_row_count,
                                   reverse=ws281x_reverse,
                                   debug=debug))
+        elif module_name == 'ws281x-indicators':
+            from WS281xIndicators import WS281xIndicators
+            modules.append(WS281xIndicators(mqtt_client, client_id, led_count=ws281x_led_count, debug=debug))
         else:
             logger.error("Unknown module " + module_name + "!")
 
@@ -275,7 +278,8 @@ def initialize(module_names):
                 autostart = True
         if ws281x_start:
             from WS281x import WS281x
-            if isinstance(module, WS281x):
+            from WS281xIndicators import WS281xIndicators
+            if isinstance(module, WS281x) or isinstance(module, WS281xIndicators):
                 autostart = True
 
         if autostart:
@@ -367,6 +371,7 @@ Options:
       water-detector    : Water detector (Flying Fish MH Sensor)
       wheels            : Wheels
       ws281x            : WS281x driver
+      ws281x-indicators : WS281x driver as indicator LEDs
 
 Commander
   --commander-checks command1:interval1[,command2:interval2[,...]]

@@ -1,1 +1,22 @@
 sudo python ./main.py otidea -d -m ws281x --ws281x-start --ws281x-led-count 100 --ws281x-row-count 4 -d --ws281x-startup-file test/
+
+sudo apt update
+sudo apt-get --assume-yes install curl wget git build-essential unzip
+# node npm
+
+wget -O - https://raw.githubusercontent.com/sdesalas/node-pi-zero/master/install-node-v5.12.0.sh | bash
+
+mkdir ~/Workspace
+cd ~/Workspace
+git clone --depth=1 https://github.com/kubovy/MagicMirror.git
+cd MagicMirror
+npm install
+
+THEME_DIR="/usr/share/plymouth/themes"
+sudo mkdir $THEME_DIR/MagicMirror
+sudo cp ~/Workspace/MagicMirror/splashscreen/splash.png $THEME_DIR/MagicMirror/splash.png
+sudo cp ~/Workspace/MagicMirror/splashscreen/MagicMirror.plymouth $THEME_DIR/MagicMirror/MagicMirror.plymouth
+sudo cp ~/Workspace/MagicMirror/splashscreen/MagicMirror.script $THEME_DIR/MagicMirror/MagicMirror.script
+sudo plymouth-set-default-theme -R MagicMirror
+
+sudo npm install -g pm2
