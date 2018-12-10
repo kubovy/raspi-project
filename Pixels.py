@@ -59,7 +59,7 @@ class Pixels(ModuleMQTT):
         self.strip = Adafruit_NeoPixel(self.LED_COUNT, led_pin, self.LED_FREQ_HZ, self.LED_DMA, self.LED_INVERT,
                                        self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0:
             rgb = payload.split(",")
             self.set_color(int(path[0]), int(rgb[0]), int(rgb[1]), int(rgb[2]))

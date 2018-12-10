@@ -25,7 +25,7 @@ class ModuleMQTT(Module):
         #                  + " qos=" + str(qos) + ", retain="  + str(retrain) + ": " + payload)
         self.client.publish(self.service_name + "/state/" + self.module_name + topic, payload, qos, retrain)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         self.logger.info("Message: " + "/".join(path) + ": " + payload)
 
     def __on_message__(self, client, userdata, msg):
@@ -33,7 +33,7 @@ class ModuleMQTT(Module):
         try:
             path = msg.topic.split("/")
             if len(path) > 2 and path[0] == self.service_name and path[1] == "control" and path[2] == self.module_name:
-                    self.on_message(path[3:], msg.payload)  # {service}/control/{module}/#
+                    self.on_mqtt_message(path[3:], msg.payload)  # {service}/control/{module}/#
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()

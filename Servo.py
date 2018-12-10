@@ -25,7 +25,7 @@ class Servo(ModuleMQTT):
         for servo in range(0, len(self.servo_mids)):
             self.set_position(servo, servo_mids[servo])
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0:
             try:
                 servo = int(path[0])

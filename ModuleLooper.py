@@ -26,7 +26,7 @@ class ModuleLooper(ModuleMQTT):
     def on_stop(self):
         pass
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0 and path[0] == "state":  # {service}/control/{module}/state
             if payload == "ON":
                 self.start()

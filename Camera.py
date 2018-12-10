@@ -55,7 +55,7 @@ class Camera(ModuleMQTT):
         self.wdd = self.watch_manager.add_watch(state_file, watch_mask)
         self.notifier.start()
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if payload == "ON":
             call(["/usr/local/bin/mjpeg-streamer", "start"])
         else:

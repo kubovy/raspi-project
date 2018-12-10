@@ -24,7 +24,7 @@ class Ultrasonic(ModuleLooper):
 
         self.publish("delay", str(self.delay), 1, False)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         self.logger.info("Message: " + "/".join(path) + ": " + payload)
         if len(path) == 0 and (payload == "" or payload == "MEASURE"):
             distance = self.get_distance()
@@ -37,7 +37,7 @@ class Ultrasonic(ModuleLooper):
             else:
                 self.stop()
         else:
-            super(Ultrasonic, self).on_message(path, payload)
+            super(Ultrasonic, self).on_mqtt_message(path, payload)
 
     def looper(self):
         distance = self.get_distance()

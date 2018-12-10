@@ -128,6 +128,7 @@ class WS281x(ModuleLooper):
     thread = None
 
     serial_reader = None
+    bluetooth_server = None
 
     def __init__(self, client, service_name, startup_file=None,
                  led_count=50, row_led_count=24, row_count=2, reverse=False, debug=False):
@@ -437,14 +438,18 @@ class WS281x(ModuleLooper):
         time.sleep(config.wait / 1000.0)
 
     def on_start(self):
+        if self.bluetooth_server is not None:
+            self.bluetooth_server.register(self)
         if self.serial_reader is not None:
             self.serial_reader.register(self)
 
     def on_stop(self):
+        if self.bluetooth_server is not None:
+            self.bluetooth_server.unregister(self)
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 0:
             if payload == "ON":
                 self.data = to_configs(json.loads(json.dumps([{
@@ -537,7 +542,18 @@ class WS281x(ModuleLooper):
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
         else:
-            super(WS281x, self).on_message(path, payload)
+            super(WS281x, self).on_mqtt_message(path, payload)
+
+    def on_bluetooth_message(self, message):
+        self.logger.debug("Message: " + message)
+        if message == "BT:CONNECTED":
+            pass
+        elif message == "BT:DISCONNECTED":
+            pass
+        elif message.startswith("BT:IDD:"):
+            pass
+        elif message.startswith("WS:"):
+            self.data = to_configs(json.loads(message[3:]))
 
     def on_serial_message(self, message):
         try:

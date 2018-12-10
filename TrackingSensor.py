@@ -192,7 +192,7 @@ class TrackingSensor(ModuleLooper):
         
         return self.last_value, sensor_values
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if payload == "" or payload == "MEASURE":
             data = self.analog_read()
             self.logger.info("Measuring TR: " + str(data))

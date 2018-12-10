@@ -579,7 +579,7 @@ def main(argv):
     mqtt_client = create_mqtt_client(broker_host, broker_port, client_id,
                                      on_connect=on_connect,
                                      on_disconnect=on_disconnect)
-    mqtt_client.on_message = on_message
+    mqtt_client.on_message = on_mqtt_message
 
     initialize(module_names)
     looper()
@@ -606,7 +606,7 @@ def on_disconnect(client, userdata, rc):
 
 # The callback for when a PUBLISH message is received from the server.
 # noinspection PyUnusedLocal
-def on_message(client, userdata, msg):
+def on_mqtt_message(client, userdata, msg):
     global interrupted
     try:
         logger.debug(msg.topic + ": '" + str(msg.payload) + "'")

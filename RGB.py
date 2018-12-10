@@ -35,7 +35,7 @@ class RGB(ModuleLooper):
         self.pi = pigpio.pi()
         self.set_color()
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         rgb = payload.split(",")
         self.red = int(rgb[0])
         self.green = int(rgb[1])

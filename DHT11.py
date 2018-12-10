@@ -19,7 +19,7 @@ class DHT11(ModuleMQTT):
         self.interval = interval
         self.trigger()
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 0:
             if payload == "ON":
                 self.trigger()

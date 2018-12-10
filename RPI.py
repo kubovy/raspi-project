@@ -57,7 +57,7 @@ class RPI(ModuleMQTT):
         for check in self.checks:
             self.trigger(check)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 1 and path[0] == "display":                           # {service}/control/commander/display
             if payload == "ON":
                 subprocess.call(["vcgencmd", "display_power", "1"])

@@ -54,7 +54,7 @@ class MCP23017(ModuleLooper):
                 j = idx % 2
                 self.BUS[i].write_byte_data(self.DEVICES[i], self.OLATS[j], self.output_cache[idx])
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0:   # {service}/control/mcp23017/{bit}
             self.set(int(path[0]), payload.lower() == "true" or payload.lower() == "on")
 

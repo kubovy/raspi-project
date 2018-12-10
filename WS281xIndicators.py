@@ -115,7 +115,7 @@ class WS281xIndicators(ModuleLooper):
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 1:
             try:
                 self.set(int(path[0]), payload)
@@ -126,7 +126,7 @@ class WS281xIndicators(ModuleLooper):
                 self.logger.error('Oops!')
                 traceback.print_exc()
         else:
-            # super(WS281xIndicators, self).on_message(path, payload)
+            # super(WS281xIndicators, self).on_mqtt_message(path, payload)
             all_data = json.loads(payload)
             for led in all_data.keys():
                 try:

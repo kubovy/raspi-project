@@ -81,7 +81,7 @@ class LCD(ModuleMQTT):
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 1 and path[0] == "clear":
             self.clear()
         elif len(path) == 1 and path[0] == "backlight":

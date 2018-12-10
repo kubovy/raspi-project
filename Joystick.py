@@ -53,7 +53,7 @@ class Joystick(ModuleLooper):
         if self.control != "OFF": self.publish("control", "OFF", 1, True)
         self.control = "OFF"
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0 and path[0] == "state":       # {service}/control/joystick/state
             if payload == "ON":
                 self.start("OFF")

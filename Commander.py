@@ -25,7 +25,7 @@ class Commander(ModuleMQTT):
         for check in self.checks:
             self.trigger(check)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0:                                                      # {service}/control/commander
             if len(path) == 1 and path[0] == "shutdown":                       # {service}/control/commander/shutdown
                 subprocess.call(["shutdown", "now"])

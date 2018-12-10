@@ -47,6 +47,10 @@ class StateMachine(ModuleMQTT):
             self.bluetooth_server.register(self)
         self.transit(self.initial_state)
 
+    def stop(self):
+        if self.bluetooth_server is not None:
+            self.bluetooth_server.unregister(self)
+
     def on_bluetooth_message(self, message):
         if message == "BT:CONNECTED":
             self.set_state('bluetooth', 'connected', True)
@@ -71,7 +75,7 @@ class StateMachine(ModuleMQTT):
             elif len(parts) == 3:
                 self.set_state('bluetooth', parts[1], parts[2])
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 2:
             try:
                 self.set_state(path[0], path[1], payload)

@@ -74,7 +74,7 @@ class PanTilt(ModuleMQTT):
         self._i2c_address = address
         self._i2c = i2c_bus
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) > 0:
             try:
                 servo = int(path[0])

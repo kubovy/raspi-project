@@ -17,7 +17,7 @@ class Buzzer(ModuleMQTT):
 
         self.off()
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 0:               # {service}/control/{module}
             if payload == "ON":
                 self.on()

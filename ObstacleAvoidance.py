@@ -56,7 +56,7 @@ class ObstacleAvoidance(ModuleMQTT):
         super(ObstacleAvoidance, self).__init__(client, service_name, "obstacle-avoidance", debug)
         self.publish("obstacle-avoidance", "OFF", 1, True)
 
-    def on_message(self, path, payload):
+    def on_mqtt_message(self, path, payload):
         if len(path) == 0:
             if payload == "ON":
                 self.start()
