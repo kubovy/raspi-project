@@ -3,7 +3,7 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-from Logger import Logger
+from modules.Logger import Logger
 
 
 class Module(object):

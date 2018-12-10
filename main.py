@@ -12,7 +12,7 @@ from threading import Thread
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from Logger import Logger
+from modules.Logger import Logger
 from ModuleMQTT import *
 
 debug = False
@@ -79,7 +79,7 @@ servo_pitch_max = 2800
 
 # State Machine
 state_machine_start = True
-state_machine_description_file = "state-machine.yml"
+state_machine_description_file = None
 
 # Ultrasonic
 ultrasonic_pin_trigger = 22
@@ -143,31 +143,31 @@ def initialize(module_names):
     logger.info("Loading modules: " + str(module_names))
     for module_name in module_names:
         if module_name == "buzzer":
-            from Buzzer import Buzzer
+            from modules.Buzzer import Buzzer
             modules.append(Buzzer(mqtt_client, client_id, pin=buzzer_pin, debug=debug))
         elif module_name == "bluetooth-server":
-            from BluetoothServer import BluetoothServer
+            from modules.BluetoothServer import BluetoothServer
             modules.append(BluetoothServer(mqtt_client, client_id, bluetooth_server_inbound_ports,
                                            bluetooth_server_outbound_ports, debug=debug))
         elif module_name == "camera":
-            from Camera import Camera
+            from modules.Camera import Camera
             modules.append(Camera(mqtt_client, client_id, state_file=camera_state_file, debug=debug))
         elif module_name == "commander":
-            from Commander import Check, Commander
+            from modules.Commander import Check, Commander
             checks = None if commander_checks is None else map(lambda p: Check(p[0], int(p[1])),
                                                                map(lambda s: s.split(":"), commander_checks.split(",")))
             modules.append(Commander(mqtt_client, client_id, checks=checks, debug=debug))
         elif module_name == "dht11":
-            from DHT11 import DHT11
+            from modules.DHT11 import DHT11
             modules.append(DHT11(mqtt_client, client_id, pin=dht11_pin, interval=dht11_interval, debug=debug))
         elif module_name == "infrared-receiver":
-            from InfraredReceiver import InfraredReceiver
+            from modules.InfraredReceiver import InfraredReceiver
             modules.append(InfraredReceiver(mqtt_client, client_id, pin=ir_receiver_pin, debug=debug))
         elif module_name == "infrared-sensor":
-            from InfraredSensor import InfraredSensor
+            from modules.InfraredSensor import InfraredSensor
             modules.append(InfraredSensor(mqtt_client, client_id, pins=ir_sensor_pins, debug=debug))
         elif module_name == "joystick":
-            from Joystick import Joystick
+            from modules.Joystick import Joystick
             modules.append(Joystick(mqtt_client, client_id,
                                     pin_center=joystick_pin_center,
                                     pin_a=joystick_pin_a,
@@ -176,39 +176,39 @@ def initialize(module_names):
                                     pin_d=joystick_pin_d,
                                     debug=debug))
         elif module_name == "lcd":
-            from LCD import LCD
+            from modules.LCD import LCD
             modules.append(LCD(mqtt_client, client_id, debug=debug))
         elif module_name == "mcp23017":
-            from MCP23017 import MCP23017
+            from modules.MCP23017 import MCP23017
             modules.append(MCP23017(mqtt_client, client_id, debug=debug))
         elif module_name == "monitor":
-            from Monitor import Monitor
+            from modules.Monitor import Monitor
             modules.append(Monitor(mqtt_client, client_id, debug=debug))
         elif module_name == "motion-detector":
-            from MotionDetector import MotionDetector
+            from modules.MotionDetector import MotionDetector
             modules.append(MotionDetector(mqtt_client, client_id, pin=motion_detector_pin, debug=debug))
         elif module_name == "obstacle-avoidance":
-            from ObstacleAvoidance import ObstacleAvoidance
+            from modules.ObstacleAvoidance import ObstacleAvoidance
             modules.append(ObstacleAvoidance(mqtt_client, client_id, debug=debug))
         elif module_name == "pantilt":
-            from PanTilt import PanTilt
+            from modules.PanTilt import PanTilt
             modules.append(PanTilt(mqtt_client, client_id, debug=debug))
         elif module_name == "pixels":
-            from Pixels import Pixels
+            from modules.Pixels import Pixels
             modules.append(Pixels(mqtt_client, client_id, led_pin=pixels_pin, pixel_count=pixels_count, debug=debug))
         elif module_name == "rgb":
-            from RGB import RGB
+            from modules.RGB import RGB
             modules.append(RGB(mqtt_client, client_id, debug=debug))
         elif module_name == "rpi":
-            from RPI import RPI
+            from modules.RPI import RPI
             modules.append(RPI(mqtt_client, client_id, debug=debug))
         elif module_name == "serial-reader":
-            from SerialReader import SerialReader
+            from modules.SerialReader import SerialReader
             modules.append(SerialReader(mqtt_client, client_id,
                                         ports=serial_reader_ports,
                                         debug=debug))
         elif module_name == "servo":
-            from Servo import Servo
+            from modules.Servo import Servo
             modules.append(Servo(mqtt_client, client_id,
                                  servo_mins=[servo_roll_min, servo_pitch_min],
                                  servo_mids=[servo_roll_mid, servo_pitch_mid],
@@ -216,22 +216,22 @@ def initialize(module_names):
                                  degree_span=180.0,
                                  debug=debug))
         elif module_name == "state-machine":
-            from StateMachine import StateMachine
+            from modules.StateMachine import StateMachine
             modules.append(StateMachine(mqtt_client, client_id, state_machine_description_file, debug=debug))
         elif module_name == "tracking-sensor":
-            from TrackingSensor import TrackingSensor
+            from modules.TrackingSensor import TrackingSensor
             modules.append(TrackingSensor(mqtt_client, client_id, debug=debug))
         elif module_name == "ultrasonic":
-            from Ultrasonic import Ultrasonic
+            from modules.Ultrasonic import Ultrasonic
             modules.append(Ultrasonic(mqtt_client, client_id,
                                       pin_trigger=ultrasonic_pin_trigger,
                                       pin_echo=ultrasonic_pin_echo,
                                       debug=debug))
         elif module_name == "water-detector":
-            from WaterDetector import WaterDetector
+            from modules.WaterDetector import WaterDetector
             modules.append(WaterDetector(mqtt_client, client_id, pin=water_detector_pin, debug=debug))
         elif module_name == "wheels":
-            from Wheels import Wheels
+            from modules.Wheels import Wheels
             modules.append(Wheels(mqtt_client, client_id,
                                   pin_right_forward=wheels_pin_right_forward,
                                   pin_right_backward=wheels_pin_right_backward,
@@ -241,7 +241,7 @@ def initialize(module_names):
                                   pin_left_enabled=wheels_pin_left_enabled,
                                   debug=debug))
         elif module_name == "ws281x":
-            from WS281x import WS281x
+            from modules.WS281x import WS281x
             modules.append(WS281x(mqtt_client, client_id,
                                   startup_file=ws281x_startup_file,
                                   led_count=ws281x_led_count,
@@ -250,7 +250,7 @@ def initialize(module_names):
                                   reverse=ws281x_reverse,
                                   debug=debug))
         elif module_name == 'ws281x-indicators':
-            from WS281xIndicators import WS281xIndicators
+            from modules.WS281xIndicators import WS281xIndicators
             modules.append(WS281xIndicators(mqtt_client, client_id, led_count=ws281x_led_count, debug=debug))
         else:
             logger.error("Unknown module " + module_name + "!")
@@ -259,88 +259,88 @@ def initialize(module_names):
     for module in modules:
 
         if hasattr(module, 'buzzer'):
-            from Buzzer import Buzzer
+            from modules.Buzzer import Buzzer
             module.buzzer = next((i for i in modules if isinstance(i, Buzzer)), None)
         if hasattr(module, 'bluetooth_server'):
-            from BluetoothServer import BluetoothServer
+            from modules.BluetoothServer import BluetoothServer
             module.bluetooth_server = next((i for i in modules if isinstance(i, BluetoothServer)), None)
         if hasattr(module, "infrared_receiver"):
-            from InfraredReceiver import InfraredReceiver
+            from modules.InfraredReceiver import InfraredReceiver
             module.infrared_receiver = next((i for i in modules if isinstance(i, InfraredReceiver)), None)
         if hasattr(module, "infrared_sensor"):
-            from InfraredSensor import InfraredSensor
+            from modules.InfraredSensor import InfraredSensor
             module.infrared_sensor = next((i for i in modules if isinstance(i, InfraredSensor)), None)
         if hasattr(module, "joystick"):
-            from Joystick import Joystick
+            from modules.Joystick import Joystick
             module.joystick = next((i for i in modules if isinstance(i, Joystick)), None)
         if hasattr(module, "lcd"):
-            from LCD import LCD
+            from modules.LCD import LCD
             module.lcd = next((i for i in modules if isinstance(i, LCD)), None)
         if hasattr(module, "mcp23017"):
-            from MCP23017 import MCP23017
+            from modules.MCP23017 import MCP23017
             module.mcp23017 = next((i for i in modules if isinstance(i, MCP23017)), None)
         if hasattr(module, "motion_detector"):
-            from MotionDetector import MotionDetector
+            from modules.MotionDetector import MotionDetector
             module.motion_detector = next((i for i in modules if isinstance(i, MotionDetector)), None)
         if hasattr(module, "obstacle_avoidance"):
-            from ObstacleAvoidance import ObstacleAvoidance
+            from modules.ObstacleAvoidance import ObstacleAvoidance
             module.obstacle_avoidance = next((i for i in modules if isinstance(i, ObstacleAvoidance)), None)
         if hasattr(module, "pixels"):
-            from Pixels import Pixels
+            from modules.Pixels import Pixels
             module.pixels = next((i for i in modules if isinstance(i, Pixels)), None)
         if hasattr(module, "rgb"):
-            from RGB import RGB
+            from modules.RGB import RGB
             module.rgb = next((i for i in modules if isinstance(i, RGB)), None)
         if hasattr(module, "serial_reader"):
-            from SerialReader import SerialReader
+            from modules.SerialReader import SerialReader
             module.serial_reader = next((i for i in modules if isinstance(i, SerialReader)), None)
         if hasattr(module, "servo"):
-            from Servo import Servo
+            from modules.Servo import Servo
             module.servo = next((i for i in modules if isinstance(i, Servo)), None)
         if hasattr(module, "state_machine"):
-            from StateMachine import StateMachine
+            from modules.StateMachine import StateMachine
             module.state_machine = next((i for i in modules if isinstance(i, StateMachine)), None)
         if hasattr(module, "tracking_sensor"):
-            from TrackingSensor import TrackingSensor
+            from modules.TrackingSensor import TrackingSensor
             module.tracking_sensor = next((i for i in modules if isinstance(i, TrackingSensor)), None)
         if hasattr(module, "ultrasonic"):
-            from Ultrasonic import Ultrasonic
+            from modules.Ultrasonic import Ultrasonic
             module.ultrasonic = next((i for i in modules if isinstance(i, Ultrasonic)), None)
         if hasattr(module, "water_detector"):
-            from WaterDetector import WaterDetector
+            from modules.WaterDetector import WaterDetector
             module.wheels = next((i for i in modules if isinstance(i, WaterDetector)), None)
         if hasattr(module, "wheels"):
-            from Wheels import Wheels
+            from modules.Wheels import Wheels
             module.wheels = next((i for i in modules if isinstance(i, Wheels)), None)
         if hasattr(module, "ws281x"):
-            from WS281x import WS281x
+            from modules.WS281x import WS281x
             module.ws281x = next((i for i in modules if isinstance(i, WS281x)), None)
         if hasattr(module, "ws281x_indicators"):
-            from WS281xIndicators import WS281xIndicators
+            from modules.WS281xIndicators import WS281xIndicators
             module.ws281x_indicators = next((i for i in modules if isinstance(i, WS281xIndicators)), None)
 
     for module in modules:
         autostart = False
 
         if bluetooth_server_start:
-            from BluetoothServer import BluetoothServer
+            from modules.BluetoothServer import BluetoothServer
             if isinstance(module, BluetoothServer):
                 autostart = True
         if mcp23017_start:
-            from MCP23017 import MCP23017
+            from modules.MCP23017 import MCP23017
             if isinstance(module, MCP23017):
                 autostart = True
         if serial_reader_start:
-            from SerialReader import SerialReader
+            from modules.SerialReader import SerialReader
             if isinstance(module, SerialReader):
                 autostart = True
         if state_machine_start:
-            from StateMachine import StateMachine
+            from modules.StateMachine import StateMachine
             if isinstance(module, StateMachine):
                 autostart = True
         if ws281x_start:
-            from WS281x import WS281x
-            from WS281xIndicators import WS281xIndicators
+            from modules.WS281x import WS281x
+            from modules.WS281xIndicators import WS281xIndicators
             if isinstance(module, WS281x) or isinstance(module, WS281xIndicators):
                 autostart = True
 

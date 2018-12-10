@@ -1,0 +1,87 @@
+---
+devices:
+  rgb_main_4: { kind: ws281x-indicators, key: 0 }
+  rgb_main_3: { kind: ws281x-indicators, key: 1 }
+  rgb_right_top: { kind: ws281x-indicators, key: 2 }
+  rgb_right_middle: { kind: ws281x-indicators, key: 3 }
+  rgb_right_bottom: { kind: ws281x-indicators, key: 4 }
+  rgb_bottom_4: { kind: ws281x-indicators, key: 5 }
+  rgb_bottom_3: { kind: ws281x-indicators, key: 6 }
+  rgb_bottom_2: { kind: ws281x-indicators, key: 7 }
+  rgb_bottom_1: { kind: ws281x-indicators, key: 8 }
+  rgb_left_top: { kind: ws281x-indicators, key: 9 }
+  rgb_left_middle: { kind: ws281x-indicators, key: 10 }
+  rgb_left_bottom: { kind: ws281x-indicators, key: 11 }
+  rgb_main_2: { kind: ws281x-indicators, key: 12 }
+  rgb_main_1: { kind: ws281x-indicators, key: 13 }
+  rgb_1: { kind: ws281x-indicators, key: 14 }
+  rgb_2: { kind: ws281x-indicators, key: 15 }
+  rgb_3: { kind: ws281x-indicators, key: 16 }
+  rgb_4: { kind: ws281x-indicators, key: 17 }
+  rgb_5: { kind: ws281x-indicators, key: 18 }
+  rgb_6: { kind: ws281x-indicators, key: 19 }
+  rgb_7: { kind: ws281x-indicators, key: 20 }
+  rgb_8: { kind: ws281x-indicators, key: 21 }
+  rgb_9: { kind: ws281x-indicators, key: 22 }
+  rgb_10: { kind: ws281x-indicators, key: 31 }
+  rgb_11: { kind: ws281x-indicators, key: 30 }
+  rgb_12: { kind: ws281x-indicators, key: 29 }
+  rgb_13: { kind: ws281x-indicators, key: 28 }
+  rgb_14: { kind: ws281x-indicators, key: 27 }
+  rgb_15: { kind: ws281x-indicators, key: 23 }
+  rgb_16: { kind: ws281x-indicators, key: 24 }
+  rgb_17: { kind: ws281x-indicators, key: 25 }
+  rgb_18: { kind: ws281x-indicators, key: 26 }
+
+  led_main_1: { kind: mcp23017, key: 30 }
+  led_main_2: { kind: mcp23017, key: 29 }
+  led_main_4: { kind: mcp23017, key: 27 }
+  led_launch: { kind: mcp23017, key: 31 }
+
+  btn_main_1: { kind: mcp23017, key: 4 }
+  btn_main_2: { kind: mcp23017, key: 3 }
+  btn_main_3_down: { kind: mcp23017, key: 1 }
+  btn_main_3_up: { kind: mcp23017, key: 2 }
+  btn_main_4: { kind: mcp23017, key: 0 }
+
+  btn_1: { kind: mcp23017, key: 5 }
+  btn_2: { kind: mcp23017, key: 6 }
+  btn_3: { kind: mcp23017, key: 7 }
+  btn_4: { kind: mcp23017, key: 8 }
+  btn_5: { kind: mcp23017, key: 9 }
+  btn_6: { kind: mcp23017, key: 10 }
+  btn_7: { kind: mcp23017, key: 11 }
+  btn_8: { kind: mcp23017, key: 12 }
+  btn_9: { kind: mcp23017, key: 13 }
+
+  btn_10: { kind: mcp23017, key: 22 }
+  btn_11: { kind: mcp23017, key: 21 }
+  btn_12: { kind: mcp23017, key: 20 }
+  btn_13: { kind: mcp23017, key: 19 }
+  btn_14: { kind: mcp23017, key: 18 }
+  btn_15: { kind: mcp23017, key: 17 }
+  btn_16: { kind: mcp23017, key: 16 }
+  btn_17: { kind: mcp23017, key: 15 }
+  btn_18: { kind: mcp23017, key: 14 }
+
+  btn_launch: { kind: mcp23017, key: 23 }
+
+  bt_connected: { kind: bluetooth, key: connected }
+  bt_test: { kind: bluetooth, key: test }
+
+vars:
+  color_black: {pattern: light, color: {red: 0, green: 0, blue: 0 }}
+  color_white: {pattern: light, color: {red: 16, green: 16, blue: 16 }}
+  color_yellow: {pattern: light, color: {red: 32, green: 32, blue: 0 }}
+  color_yellow_fade: {pattern: fadeToggle, color: {red: 32, green: 32, blue: 0}, wait: 5, min: 5, max: 80}
+  color_orange: {pattern: light, color: {red: 32, green: 16, blue: 0 }}
+  color_red: {pattern: light, color: {red: 32, green: 0, blue: 0 }}
+  color_magenta: {pattern: light, color: {red: 32, green: 0, blue: 16 }}
+  color_blue: {pattern: light, "color": {red: 0, green: 0, blue: 32 }}
+  color_green: {pattern: light, color: {red: 0, green: 32, blue: 0 }}
+
+states:
+- name: initializing
+  conditions:
+    - actions:
+      - { kind: lcd, value: "\nInitializing\n....................\n   READY to ROLL" }

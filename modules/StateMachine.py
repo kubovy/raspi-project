@@ -24,7 +24,7 @@ class StateMachine(ModuleMQTT):
     mcp23017 = None
     ws281x_indicators = None
 
-    def __init__(self, client, service_name, description_file="state-machine.yml", debug=False):
+    def __init__(self, client, service_name, description_file=None, debug=False):
         super(StateMachine, self).__init__(client, service_name, "state-machine", debug)
 
         self.initial_state = None

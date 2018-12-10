@@ -2,7 +2,7 @@
 import time
 import math
 import smbus
-from Logger import Logger
+from modules.Logger import Logger
 
 # ============================================================================
 # Raspi PCA9685 16-Channel PWM Servo Driver
