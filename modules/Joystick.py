@@ -47,10 +47,14 @@ class Joystick(ModuleLooper):
         self.publish("control", "OFF", 1, True)
 
     def on_start(self):
-        if self.control != "OFF": self.publish("control", self.control, 1, True)
+        super(Joystick, self).on_start()
+        if self.control != "OFF":
+            self.publish("control", self.control, 1, True)
 
     def on_stop(self):
-        if self.control != "OFF": self.publish("control", "OFF", 1, True)
+        super(Joystick, self).on_stop()
+        if self.control != "OFF":
+            self.publish("control", "OFF", 1, True)
         self.control = "OFF"
 
     def on_mqtt_message(self, path, payload):

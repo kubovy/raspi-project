@@ -1,28 +1,32 @@
 import smbus
 import time
 import math
-import os
 
 from ModuleLooper import ModuleLooper
 
 
 class MCP23017(ModuleLooper):
 
-    IODIRA = 0x00  # Pin Register fuer die Richtung
-    IODIRB = 0x01  # Pin Register fuer die Richtung
+    IODIRA = 0x00  # Pin Register for direction
+    IODIRB = 0x01  # Pin Register for direction
     IODIRS = [IODIRA, IODIRB]
 
-    OLATA = 0x14
-    OLATB = 0x15  # Register fuer Ausgabe (GPB)
+    OLATA = 0x14  # Register for output (GPA)
+    OLATB = 0x15  # Register for output (GPB)
     OLATS = [OLATA, OLATB]
-    GPIOA = 0x12  # Register fuer Eingabe (GPA)
-    GPIOB = 0x13
+    GPIOA = 0x12  # Register for input (GPA)
+    GPIOB = 0x13  # Register for input (GPB)
     GPIOS = [GPIOA, GPIOB]
 
-    BUS = []
+    BUS = None
     DEVICES = [0x20, 0x21]
     INVERSE_OUTPUT = True
 
+    # Binary: 0 = Output, 1 = Input
+    # Device 1 GPA: pins as Input (11111111 = 0xFF)
+    # Device 1 GBP: pins as Input (11111111 = 0xFF)
+    # Device 2 GPA: pins as Input (11111111 = 0xFF)
+    # Device 2 GPB: first 3 pins as Input, last 5 pins Output (00000111 = 0x07)
     CONFIG = [
         [0xFF, 0xFF],
         [0xFF, 0x07]
@@ -33,26 +37,29 @@ class MCP23017(ModuleLooper):
     def __init__(self, client, service_name, debug=False):
         super(MCP23017, self).__init__(client, service_name, "mcp23017", "MCP23017", debug)
 
-        for _ in self.DEVICES:
-            # bus = smbus.SMBus(0) # Rev 1 Pi
-            self.BUS.append(smbus.SMBus(1))  # Rev 2 Pi
+        # for _ in self.DEVICES:
+        #     bus = smbus.SMBus(0) # Rev 1 Pi
+        #     self.BUS.append(smbus.SMBus(1))  # Rev 2 Pi
+        self.BUS = smbus.SMBus(1)
 
         self.input_cache = [0x00, 0x00, 0x00, 0x00]
         self.output_cache = [None, None, None, 0xF8 if self.INVERSE_OUTPUT else 0x00]
 
-        # Definiere GPA Pin 7 als Input (10000000 = 0x80)
-        # Binaer: 0 bedeutet Output, 1 bedeutet Input
-        # Definiere alle GPB Pins als Output (00000000 = 0x00)
-
-        for idx, bus in enumerate(self.BUS):
+        for idx, device in enumerate(self.DEVICES):
             for io, iodir in enumerate(self.IODIRS):
-                bus.write_byte_data(self.DEVICES[idx], iodir, self.CONFIG[idx][io])
+                self.BUS.write_byte_data(self.DEVICES[idx], iodir, self.CONFIG[idx][io])
 
         for idx, output in enumerate(self.output_cache):
             if self.output_cache[idx] is not None:
                 i = int(math.floor(idx / 2.0))
                 j = idx % 2
-                self.BUS[i].write_byte_data(self.DEVICES[i], self.OLATS[j], self.output_cache[idx])
+                self.BUS.write_byte_data(self.DEVICES[i], self.OLATS[j], self.output_cache[idx])
+
+    def finalize(self):
+        super(MCP23017, self).finalize()
+        for device in self.DEVICES:
+            for olat in self.OLATS:
+                self.BUS.write_byte_data(device, olat, 0xFF if self.INVERSE_OUTPUT else 0x00)
 
     def on_mqtt_message(self, path, payload):
         if len(path) > 0:   # {service}/control/mcp23017/{bit}
@@ -63,13 +70,13 @@ class MCP23017(ModuleLooper):
         gpio = self.GPIOS[int(math.floor(bit / 8.0)) % 2]
         real_bit = bit % 8
 
-        value = self.BUS[idx].read_byte_data(self.DEVICES[idx], gpio) if value is None else value
+        value = self.BUS.read_byte_data(self.DEVICES[idx], gpio) if value is None else value
 
         return (value >> real_bit & 1) != 0
 
     def set(self, bit, value):
         idx = int(math.floor(bit / 8.0))
-        bus = self.BUS[int(math.floor(bit / 16))]
+        # bus = self.BUS[int(math.floor(bit / 16))]
         device = self.DEVICES[int(math.floor(bit / 16))]
         olat = self.OLATS[idx % 2]
         real_bit = bit % 8
@@ -83,14 +90,14 @@ class MCP23017(ModuleLooper):
         self.logger.debug("Bit " + str(real_bit) + ": " + str(value) + " -> " + str(real_value) +
                           " Output: " + str(self.output_cache[idx]) +
                           " [" + '{0:08b}'.format(self.output_cache[idx]) + "]")
-        bus.write_byte_data(device, olat, self.output_cache[idx])
+        self.BUS.write_byte_data(device, olat, self.output_cache[idx])
 
     def looper(self):
         # Status von GPIOA Register auslesen
         current = []
-        for idx, bus in enumerate(self.BUS):
+        for device in self.DEVICES:
             for gpio in self.GPIOS:
-                current.append(bus.read_byte_data(self.DEVICES[idx], gpio))
+                current.append(self.BUS.read_byte_data(device, gpio))
 
         # changed = False
         for idx, buttons in enumerate(current):

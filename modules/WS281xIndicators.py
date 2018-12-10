@@ -108,12 +108,20 @@ class WS281xIndicators(ModuleLooper):
             self.data[index] = to_configs(data)
 
     def on_start(self):
+        super(WS281xIndicators, self).on_start()
         if self.serial_reader is not None:
             self.serial_reader.register(self)
 
     def on_stop(self):
+        super(WS281xIndicators, self).on_stop()
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
+
+    def finalize(self):
+        super(WS281xIndicators, self).finalize()
+        for led, configs in enumerate(self.data):
+            self.strip.setPixelColor(led, 0)
+        self.strip.show()
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 1:

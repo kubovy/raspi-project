@@ -438,16 +438,24 @@ class WS281x(ModuleLooper):
         time.sleep(config.wait / 1000.0)
 
     def on_start(self):
+        super(WS281x, self).on_start()
         if self.bluetooth_server is not None:
             self.bluetooth_server.register(self)
         if self.serial_reader is not None:
             self.serial_reader.register(self)
 
     def on_stop(self):
+        super(WS281x, self).on_stop()
         if self.bluetooth_server is not None:
             self.bluetooth_server.unregister(self)
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
+
+    def finalize(self):
+        super(WS281x, self).finalize()
+        for led in range(self.led_count):
+            self.strip.setPixelColor(led, 0)
+        self.strip.show()
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 0:

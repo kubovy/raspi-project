@@ -1,5 +1,7 @@
 /.idea/
 *.pyc
 *.swp
+/config/state-machine-*.yml
+/devel
 /python/
 /lirc/

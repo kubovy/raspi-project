@@ -25,7 +25,10 @@ class Logger:
 
     def info(self, message):
         self.__log__(time.ctime() + " INFO [" + self.name + "]: " + message)
-        
+
+    def warn(self, message):
+        self.__log__(time.ctime() + " WARN [" + self.name + "]: " + message)
+
     def error(self, message):
         self.__log__(time.ctime() + " ERROR [" + self.name + "]: " + message)
 

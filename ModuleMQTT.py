@@ -16,8 +16,13 @@ class ModuleMQTT(Module):
         self.client = client
         self.service_name = service_name
         self.module_name = module_name
+        self.subscription = self.service_name + "/control/" + module_name + "/#"
 
-        self.client.message_callback_add(self.service_name + "/control/" + module_name + "/#", self.__on_message__)
+        self.client.message_callback_add(self.subscription, self.__on_message__)
+
+    def on_stop(self):
+        super(ModuleMQTT, self).on_stop()
+        self.client.message_callback_remove(self.subscription)
 
     def publish(self, topic, payload=None, qos=0, retrain=False):
         if topic != "": topic = "/" + topic

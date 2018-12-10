@@ -20,12 +20,6 @@ class ModuleLooper(ModuleMQTT):
         self.thread_name = thread_name
         self.publish("state", "OFF", 1, True)
 
-    def on_start(self):
-        pass
-
-    def on_stop(self):
-        pass
-
     def on_mqtt_message(self, path, payload):
         if len(path) > 0 and path[0] == "state":  # {service}/control/{module}/state
             if payload == "ON":

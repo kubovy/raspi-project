@@ -35,10 +35,14 @@ class InfraredReceiver(ModuleLooper):
         self.publish("control", "OFF", 1, True)
 
     def on_start(self):
-        if self.control: self.publish("control", "ON", 1, True)
+        super(InfraredReceiver, self).on_start()
+        if self.control:
+            self.publish("control", "ON", 1, True)
 
     def on_stop(self):
-        if self.control: self.publish("control", "OFF", 1, True)
+        super(InfraredReceiver, self).on_stop()
+        if self.control:
+            self.publish("control", "OFF", 1, True)
         self.control = False
 
     def on_mqtt_message(self, path, payload):

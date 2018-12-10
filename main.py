@@ -7,13 +7,11 @@ import prctl
 import sys
 import getopt
 import time
+from ModuleMQTT import *
+from modules.Logger import Logger
 from threading import Thread
-
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-
-from modules.Logger import Logger
-from ModuleMQTT import *
 
 debug = False
 logger = Logger("MAIN", debug)
@@ -320,29 +318,29 @@ def initialize(module_names):
             module.ws281x_indicators = next((i for i in modules if isinstance(i, WS281xIndicators)), None)
 
     for module in modules:
-        autostart = False
+        autostart = True
 
-        if bluetooth_server_start:
+        if not bluetooth_server_start:
             from modules.BluetoothServer import BluetoothServer
             if isinstance(module, BluetoothServer):
-                autostart = True
-        if mcp23017_start:
+                autostart = False
+        if not mcp23017_start:
             from modules.MCP23017 import MCP23017
             if isinstance(module, MCP23017):
-                autostart = True
-        if serial_reader_start:
+                autostart = False
+        if not serial_reader_start:
             from modules.SerialReader import SerialReader
             if isinstance(module, SerialReader):
-                autostart = True
-        if state_machine_start:
+                autostart = False
+        if not state_machine_start:
             from modules.StateMachine import StateMachine
             if isinstance(module, StateMachine):
-                autostart = True
-        if ws281x_start:
+                autostart = False
+        if not ws281x_start:
             from modules.WS281x import WS281x
             from modules.WS281xIndicators import WS281xIndicators
             if isinstance(module, WS281x) or isinstance(module, WS281xIndicators):
-                autostart = True
+                autostart = False
 
         if autostart:
             start_method = getattr(module, "start", None)
@@ -451,36 +449,39 @@ Options:
       ws281x-indicators : WS281x driver as indicator LEDs
 
 Bluetooth Server
-  --inbound-ports=port1[,port2[,...]]        Bluetooth inbound ports
-  --outbound-ports=port1[,port2[,...]]       Bluetooth outbound ports
+  --bluetooth-inbound-ports=port1[,port2[,...]]   Bluetooth inbound ports
+  --bluetooth-outbound-ports=port1[,port2[,...]]  Bluetooth outbound ports
 
 Commander
   --commander-checks=command1:interval1[,command2:interval2[,...]]
 
 DHT11
-  --dht11-pin=pin                            DHT11 pin
-  --dht11-interval=interval                  Refresh interval in seconds
+  --dht11-pin=pin                                 DHT11 pin
+  --dht11-interval=interval                       Refresh interval in seconds
 
 MCP23017
-  --mcp23017-start                           Start right away
+  --mcp23017-start                                Start right away
 
 Motion Detector
-  --motion-detector-pin=pin                  Motion detector pin
+  --motion-detector-pin=pin                       Motion detector pin
 
 Serial port reader module:
-  --serial-reader-ports=port1[,port2[,...]]  Serial ports to read
-  --serial-reader-start                      Start listening right away
+  --serial-reader-ports=port1[,port2[,...]]       Serial ports to read
+  --serial-reader-start                           Start listening right away
+
+State Machine
+  --state-machine-description=file                State Machine's description file
 
 Water Detector
-  --water-detector-pin=pin                   Water detector pin
+  --water-detector-pin=pin                        Water detector pin
 
 WS281x Module:
-  --ws281x-led-count=count                   Total LED count (default 50)
-  --ws281x-reverse                           Reverse LED order
-  --ws281x-row-count=count                   Number of rows (default 2)
-  --ws281x-row-led-count=count               LED count in one row (default 24)
-  --ws281x-start                             Start right away
-  --ws281x-startup-file=file                 Startup file
+  --ws281x-led-count=count                        Total LED count (default 50)
+  --ws281x-reverse                                Reverse LED order
+  --ws281x-row-count=count                        Number of rows (default 2)
+  --ws281x-row-led-count=count                    LED count in one row (default 24)
+  --ws281x-start                                  Start right away
+  --ws281x-startup-file=file                      Startup file
 
 """
 
@@ -506,7 +507,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hdb:m:", [
             "help", "debug", "broker=", "module=",
-            "inbound-ports=", "outbound-ports=",
+            "bluetooth-inbound-ports=", "bluetooth-outbound-ports=",
             "commander-checks=",
             "dht11-pin=", "dht11-interval",
             "mcp23017-start",
@@ -537,9 +538,9 @@ def main(argv):
         elif opt in ("-m", "--module") and arg not in module_names:
             for module_name in arg.split(","):
                 module_names.append(module_name)
-        elif opt == "--inbound-ports":
+        elif opt == "--bluetooth-inbound-ports":
             bluetooth_server_inbound_ports = arg.split(",")
-        elif opt == "--outbound-ports":
+        elif opt == "--bluetooth-outbound-ports":
             bluetooth_server_outbound_ports = arg.split(",")
         elif opt == "--commander-checks":
             commander_checks = arg
