@@ -181,8 +181,8 @@ class BluetoothServer(ModuleLooper):
                 try:
                     connection.shutdown(2)
                     connection.close()
-                except:
-                    traceback.print_exc()
+                except BluetoothError as e:
+                    self.logger.error(e.message)
 
             for s in self.sockets:
                 try:
