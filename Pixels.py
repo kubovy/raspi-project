@@ -4,7 +4,8 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import time
-import threading
+from threading import Thread
+import prctl
 from neopixel import *
 from ModuleMQTT import ModuleMQTT
 
@@ -71,9 +72,12 @@ class Pixels(ModuleMQTT):
     def notify(self, configs, delays):
         self.notify_configs = configs
         self.notify_delays = delays
-        threading.Thread(target=self.notify_runnable).start()
+        thread = Thread(target=self.notify_runnable)
+        thread.daemon = True
+        thread.start()
 
     def notify_runnable(self):
+        prctl.set_name("Pixels Notify")
         for i in range(len(self.notify_configs)):
             self.update(to_colors(self.notify_configs[i]))
             j = i if (i < len(self.notify_delays)) else len(self.notify_delays) - 1

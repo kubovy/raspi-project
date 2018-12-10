@@ -73,9 +73,10 @@ class WS281xIndicators(ModuleLooper):
     thread = None
 
     serial_reader = None
+    iteration = 0
 
     def __init__(self, client, service_name, led_count=50, debug=False):
-        super(WS281xIndicators, self).__init__(client, service_name, "ws281x-indicators", debug)
+        super(WS281xIndicators, self).__init__(client, service_name, "ws281x-indicators", "WS281x I/O", debug)
         # Create NeoPixel object with appropriate configuration.
         self.led_count = led_count
         self.data = [None for _ in range(self.led_count)]
@@ -90,15 +91,21 @@ class WS281xIndicators(ModuleLooper):
     def set(self, index, payload):
         self.logger.debug("Setting " + str(index) + " to " + str(payload) + " " + str(type(payload)))
         if isinstance(payload, basestring):
+            data = None
             try:
                 data = json.loads("[" + payload + "]")
-            except ValueError:
-                data = [ast.literal_eval(payload)]
-
+            except ValueError as e:
+                self.logger.error(e.message)
+            if data is None:
+                try:
+                    data = [ast.literal_eval(payload)]
+                except ValueError as e:
+                    self.logger.error(e.message)
         else:
             data = [payload]
 
-        self.data[index] = to_configs(data)
+        if data is not None:
+            self.data[index] = to_configs(data)
 
     def on_start(self):
         if self.serial_reader is not None:
@@ -140,52 +147,39 @@ class WS281xIndicators(ModuleLooper):
             traceback.print_exc()
 
     def looper(self):
-        self.logger.debug("Starting looper")
-        iteration = 0
+        for led, configs in enumerate(self.data):
+            if configs is None or configs == []:
+                self.strip.setPixelColor(led, 0)
+            else:
+                config = configs[0]  # TODO JK: also multiple configs should be possible
+                if (self.iteration * self.LOOP_WAIT) % config.wait == 0:
+                    if config.pattern == 'fade':
+                        step = (self.iteration * self.LOOP_WAIT / config.wait) % (config.max - config.min)
+                        percent = step + config.min if ((step + config.min) < config.max) else \
+                            config.max - (step + config.min - config.max)
+                        factor = float(percent) / 100.0
+                        color = Color(int(float((config.color & (255 << 8)) >> 8) * factor),
+                                      int(float((config.color & (255 << 16)) >> 16) * factor),
+                                      int(float((config.color & 255)) * factor))
+                        self.strip.setPixelColor(led, color)
+                    elif config.pattern == 'fadeToggle':
+                        step = (self.iteration * self.LOOP_WAIT / config.wait) % ((config.max - config.min) * 2)
+                        percent = step + config.min if ((step + config.min) < config.max) else \
+                            config.max - (step + config.min - config.max)
+                        factor = float(percent) / 100.0
+                        color = Color(int(float((config.color & (255 << 8)) >> 8) * factor),
+                                      int(float((config.color & (255 << 16)) >> 16) * factor),
+                                      int(float((config.color & 255)) * factor))
+                        self.strip.setPixelColor(led, color)
 
-        # lastRestartChange = os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0
-        # (os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0) == lastRestartChange:
-        while not self.interrupted:
-            # if len(self.data) == 0:
-            #     self.light(Config(wait=10, minimum=50, maximum=80))
-            #     continue
+                    elif config.pattern == 'blink':
+                        on = math.floor(self.iteration * self.LOOP_WAIT / config.wait) % 2 == 0
+                        self.strip.setPixelColor(led, config.color if on else 0)
+                    else:
+                        self.strip.setPixelColor(led, config.color)
 
-            # index = iteration  # start + (iteration % (len(self.data) - start))
-            # if iteration >= 6000: iteration = 0
+        self.strip.show()
 
-            for led, configs in enumerate(self.data):
-                if configs is None or configs == []:
-                    self.strip.setPixelColor(led, 0)
-                else:
-                    config = configs[0]  # TODO JK: also multiple configs should be possible
-                    if (iteration * self.LOOP_WAIT) % config.wait == 0:
-                        if config.pattern == 'fade':
-                            step = (iteration * self.LOOP_WAIT / config.wait) % (config.max - config.min)
-                            percent = step + config.min if ((step + config.min) < config.max) else \
-                                config.max - (step + config.min - config.max)
-                            factor = float(percent) / 100.0
-                            color = Color(int(float((config.color & (255 << 8)) >> 8) * factor),
-                                          int(float((config.color & (255 << 16)) >> 16) * factor),
-                                          int(float((config.color & 255)) * factor))
-                            self.strip.setPixelColor(led, color)
-                        elif config.pattern == 'fadeToggle':
-                            step = (iteration * self.LOOP_WAIT / config.wait) % ((config.max - config.min) * 2)
-                            percent = step + config.min if ((step + config.min) < config.max) else \
-                                config.max - (step + config.min - config.max)
-                            factor = float(percent) / 100.0
-                            color = Color(int(float((config.color & (255 << 8)) >> 8) * factor),
-                                          int(float((config.color & (255 << 16)) >> 16) * factor),
-                                          int(float((config.color & 255)) * factor))
-                            self.strip.setPixelColor(led, color)
-
-                        elif config.pattern == 'blink':
-                            on = math.floor(iteration * self.LOOP_WAIT / config.wait) % 2 == 0
-                            self.strip.setPixelColor(led, config.color if on else 0)
-                        else:
-                            self.strip.setPixelColor(led, config.color)
-
-            self.strip.show()
-
-            time.sleep(self.LOOP_WAIT / 1000.0)
-            iteration = iteration + 1
-            # if iteration >= 6000: iteration = 0
+        time.sleep(self.LOOP_WAIT / 1000.0)
+        self.iteration = self.iteration + 1
+        # if iteration >= 6000: iteration = 0

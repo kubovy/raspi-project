@@ -22,7 +22,7 @@ class TrackingSensor(ModuleLooper):
     last = -1
     
     def __init__(self, client, service_name, num_sensors=5, debug=False):
-        super(TrackingSensor, self).__init__(client, service_name, "tracking", debug)
+        super(TrackingSensor, self).__init__(client, service_name, "tracking", "Tracking", debug)
         self.numSensors = num_sensors
         self.calibratedMin = [0] * self.numSensors
         self.calibratedMax = [1023] * self.numSensors

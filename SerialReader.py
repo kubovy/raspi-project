@@ -4,11 +4,13 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import binascii
+import prctl
 import serial
 from serial.serialutil import *
 import time
-import threading
+from threading import Thread
 import traceback
+
 from ModuleLooper import ModuleLooper
 
 
@@ -32,7 +34,7 @@ class SerialReader(ModuleLooper):
     buffers = []
 
     def __init__(self, client, service_name, identifier="20180214", ports=None, debug=False):
-        super(SerialReader, self).__init__(client, service_name, "serial-reader", debug)
+        super(SerialReader, self).__init__(client, service_name, "serial-reader", "Serial", debug)
         self.identifier = identifier
         self.ports = [] if ports is None else ports
         for i in range(len(self.ports)):
@@ -100,6 +102,7 @@ class SerialReader(ModuleLooper):
         self.logger.debug(">>" + str(self.ports[index]))
         self.buffers[index] = bytearray()
         port = self.ports[index]
+        prctl.set_name(self.thread_name + " Port " + str(port))
         serial_port = None
 
         while not self.interrupted:  # Not connected
@@ -194,7 +197,8 @@ class SerialReader(ModuleLooper):
 
     def looper(self):
         for i in range(len(self.ports)):
-            thread = threading.Thread(target=self.__port_looper__, args=[i])
+            thread = Thread(target=self.__port_looper__, args=[i])
+            thread.daemon = True
             self.port_threads.append(thread)
             thread.start()
 

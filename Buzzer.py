@@ -4,7 +4,7 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import RPi.GPIO as GPIO
-import threading
+from threading import Timer
 from ModuleMQTT import ModuleMQTT
 
 
@@ -26,7 +26,7 @@ class Buzzer(ModuleMQTT):
 
     def beep(self, delay):
         self.on()
-        threading.Timer(delay, self.off).start()
+        Timer(delay, self.off).start()
 
     def on(self):
         GPIO.output(self.pin, GPIO.HIGH)

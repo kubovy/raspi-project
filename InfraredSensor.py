@@ -14,7 +14,7 @@ class InfraredSensor(ModuleLooper):
     state = []
 
     def __init__(self, client, service_name, pins=None, debug=False):
-        super(InfraredSensor, self).__init__(client, service_name, "ir-sensor", debug)
+        super(InfraredSensor, self).__init__(client, service_name, "ir-sensor", "IR Sensor", debug)
         self.pins = [19, 16] if pins is None else pins
         self.source = Observable.interval(50).map(lambda i: self.get_state())
 

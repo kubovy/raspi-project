@@ -134,9 +134,10 @@ class LCD(ModuleMQTT):
             print("Unknown State!")
 
     def set(self, string):
-        for i, line in enumerate(string.splitlines()):
-            if i < self.rows:
-                self.set_line(line, i + 1)
+        if string is not None:
+            for i, line in enumerate(string.splitlines()):
+                if i < self.rows:
+                    self.set_line(line, i + 1)
 
     def set_line(self, string, line):
         if line == 1:

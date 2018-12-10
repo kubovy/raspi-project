@@ -31,9 +31,9 @@ class MCP23017(ModuleLooper):
     state_machine = None
 
     def __init__(self, client, service_name, debug=False):
-        super(MCP23017, self).__init__(client, service_name, "mcp23017", debug)
+        super(MCP23017, self).__init__(client, service_name, "mcp23017", "MCP23017", debug)
 
-        for device in self.DEVICES:
+        for _ in self.DEVICES:
             # bus = smbus.SMBus(0) # Rev 1 Pi
             self.BUS.append(smbus.SMBus(1))  # Rev 2 Pi
 
@@ -109,21 +109,4 @@ class MCP23017(ModuleLooper):
                         if self.state_machine is not None:
                             self.state_machine.set_state("mcp23017", idx * 8 + bit, current)
                 self.input_cache[idx] = buttons
-
-        # if changed:
-        #     # print str(Taster)
-        #     # os.system('clear')
-        #     for idx, buttons in enumerate(self.input_cache):
-        #         print "Buttons " + str(idx) + ":"
-        #         for i in range(8):
-        #             btn = (buttons >> i) & 0b1
-        #             self.logger.debug("BTN[" + str(idx) + "] " + str(i) + ": " + str(btn))
-        #             # if idx == 0 and i == 5:
-        #             #     setOutput(3, btn)
-        #             # if idx == 0 and i == 6:
-        #             #     setOutput(5, btn)
-        #             # if idx == 0 and i == 7:
-        #             #     setOutput(6, btn)
-        #             # if idx == 1 and i == 0:
-        #             #     setOutput(7, btn)
-        #             #
+        time.sleep(0.05)

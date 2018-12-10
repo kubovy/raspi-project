@@ -24,7 +24,7 @@ class Joystick(ModuleLooper):
     wheels = None
 
     def __init__(self, client, service_name, pin_center=7, pin_a=8, pin_b=9, pin_c=10, pin_d=11, debug=False):
-        super(Joystick, self).__init__(client, service_name, "joystick", debug)
+        super(Joystick, self).__init__(client, service_name, "joystick", "Joystick", debug)
         self.pin_center = pin_center
         self.pin_a = pin_a
         self.pin_b = pin_b

@@ -27,7 +27,7 @@ class InfraredReceiver(ModuleLooper):
     timer = None
 
     def __init__(self, client, service_name, pin=17, debug=False):
-        super(InfraredReceiver, self).__init__(client, service_name, "ir-receiver", debug)
+        super(InfraredReceiver, self).__init__(client, service_name, "ir-receiver", "IR Receiver", debug)
 
         self.pin = pin
         GPIO.setup(self.pin, GPIO.IN)

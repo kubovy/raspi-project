@@ -5,6 +5,7 @@
 #
 import threading
 import time
+import prctl
 
 from ModuleMQTT import *
 
@@ -13,9 +14,10 @@ class ModuleLooper(ModuleMQTT):
     interrupted = False
     thread = None
 
-    def __init__(self, client, service_name, module_name, debug=False):
+    def __init__(self, client, service_name, module_name, thread_name, debug=False):
         super(ModuleLooper, self).__init__(client, service_name, module_name, debug)
 
+        self.thread_name = thread_name
         self.publish("state", "OFF", 1, True)
 
     def on_start(self):
@@ -36,6 +38,7 @@ class ModuleLooper(ModuleMQTT):
         time.sleep(5)
 
     def __looper__(self):
+        prctl.set_name(self.thread_name + " Loop")
         while not self.interrupted:
             try:
                 self.looper()
@@ -51,6 +54,7 @@ class ModuleLooper(ModuleMQTT):
             self.publish("state", "ON", 1, True)
             self.interrupted = False
             self.thread = threading.Thread(target=self.__looper__)
+            self.thread.daemon = True
             self.thread.start()
         return self.thread
 

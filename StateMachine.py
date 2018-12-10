@@ -1,4 +1,7 @@
+import ast
+import math
 import traceback
+import json
 import yaml
 import copy
 from ModuleMQTT import ModuleMQTT
@@ -16,6 +19,7 @@ class StateMachine(ModuleMQTT):
     global_state = {}
     interrupted = False
 
+    bluetooth_server = None
     lcd = None
     mcp23017 = None
     ws281x_indicators = None
@@ -39,38 +43,80 @@ class StateMachine(ModuleMQTT):
             self.logger.debug(" - " + str(k) + ": " + str(self.states[k]))
 
     def start(self):
+        if self.bluetooth_server is not None:
+            self.bluetooth_server.register(self)
         self.transit(self.initial_state)
+
+    def on_bluetooth_message(self, message):
+        if message == "BT:CONNECTED":
+            self.set_state('bluetooth', 'connected', True)
+        elif message == "BT:DISCONNECTED":
+            self.set_state('bluetooth', 'connected', False)
+            self.execute({'kind': 'lcd', 'key': None, 'value': "\n         BT\n\n--= DISCONNECTED =--"})
+        elif message.startswith("BT:IDD:"):
+            if self.lcd is not None:
+                btid = message[7:]
+                btid = (btid[:(self.lcd.cols - 2)] + "..") if len(btid) > self.lcd.cols else btid
+                btid = btid.rjust(int(math.floor((self.lcd.cols - len(btid)) / 2)) + len(btid))
+                self.execute({'kind': 'lcd', 'key': None, 'value': "\n" + btid + "\n\n--== CONNECTED ==--"})
+        elif message.startswith("TBC:PULL"):
+            self.bluetooth_server.send(json.dumps({'devices': self.devices,
+                                                   'vars': self.variables,
+                                                   'states': self.states.values()}))
+        elif message.startswith("TBC:"):
+            parts = message[4:].split(",", 3)
+            self.logger.debug(message + " -> " + message[4:] + " -> " + str(parts))
+            if len(parts) == 3 and parts[0] == 'action':
+                self.execute({'name': parts[1], 'value': parts[2], 'eval': True})
+            elif len(parts) == 3:
+                self.set_state('bluetooth', parts[1], parts[2])
 
     def on_message(self, path, payload):
         if len(path) == 2:
             try:
-                self.set_state(path[0], int(path[1]), payload)
+                self.set_state(path[0], path[1], payload)
             except:
                 self.logger.error('Oops!')
                 traceback.print_exc()
         elif len(path) == 1 and path[0] == 'restart':
             self.start()
+        elif len(path) == 1:
+            try:
+                self.set_state(path[0], payload)
+            except:
+                self.logger.error('Oops!')
+                traceback.print_exc()
         else:
             self.logger.debug("Current state: " + str(self.current_state['name']))
 
     def transit(self, new_state):
-        self.logger.debug("Transiting to: " + new_state)
+        self.logger.debug("Transiting " + (self.current_state['name'] if self.current_state is not None else "N/A") +
+                          " -> " + new_state)
         self.current_state = self.states[new_state]
 
+        self.logger.debug("Evaluating gate \"enter\"")
         self.evaluate("enter")
+        self.logger.debug("Evaluating gate \"initializing\"")
         self.evaluate("initializing")
+        self.logger.debug("Evaluating gate \"initialized\"")
         self.evaluate("initialized")
+        self.logger.debug("Evaluating gate \"normal\"")
 
     def get_kind(self, item):
-        return item['kind'] if 'kind' in item.keys() else self.devices[item['name']]['kind']
-
-    def get_index(self, item):
-        if 'index' in item.keys():
-            return item['index']
-        elif 'name' in item.keys() and item['name'] in self.devices:
-            return self.devices[item['name']]['index']
+        if 'kind' in item.keys():
+            return item['kind']
+        elif item['name'] in self.devices.keys() and 'kind' in self.devices[item['name']]:
+            return self.devices[item['name']]['kind']
         else:
             return None
+
+    def get_key(self, item):
+        key = None
+        if 'key' in item.keys():
+            key = item['key']
+        elif 'name' in item.keys() and item['name'] in self.devices and 'key' in self.devices[item['name']]:
+            key = self.devices[item['name']]['key']
+        return str(key) if key is not None else None
 
     def template_variables(self):
         variables = self.variables.copy()  # start with x's keys and values
@@ -90,6 +136,13 @@ class StateMachine(ModuleMQTT):
             if 'eval' in item.keys() and item['eval']:
                 try:
                     value = Template(item['value']).render(self.template_variables())
+                    if isinstance(value, basestring):
+                        try:
+                            value = ast.literal_eval(value)
+                        except IndentationError as e:
+                            self.logger.error(e.message)
+                        except ValueError as e:
+                            self.logger.error(e.message)
                 except AttributeError:
                     value = item['value']
             else:
@@ -101,16 +154,15 @@ class StateMachine(ModuleMQTT):
             traceback.print_exc()
             return None
 
-    def evaluate(self, state="normal", previous_state=None):
-        self.logger.debug("Current state: " + str(self.current_state['name']) + " evaluating in state " + state)
-        if 'conditions' in self.current_state.keys():
+    def evaluate(self, gate="normal", previous_state=None):
+        if self.current_state is not None and 'conditions' in self.current_state.keys():
             for condition in self.current_state['conditions']:
                 # self.logger.debug("Condition: " + str(condition))
                 result = True
                 changed = False
                 if 'expressions' in condition.keys():
                     for expression in condition['expressions']:
-                        if (state == "normal" or state == "initializing") and not isinstance(expression, basestring):
+                        if (gate == "normal" or gate == "initializing") and not isinstance(expression, basestring):
                             value = self.get_value(expression) if 'value' in expression.keys() else None
                             current = self.get_state(expression)
                             if current is None:
@@ -132,17 +184,17 @@ class StateMachine(ModuleMQTT):
                                     previous = 0
 
                             result = result and (value is None or str(current) == str(value))
-                            changed = changed or str(current) != str(previous) or state != "normal"
+                            changed = changed or str(current) != str(previous) or gate != "normal"
                             # self.logger.debug("Expression " + str(expression) + ": " +
                             #                   str(current) + " <> " + str(value) + "[" + str(type(value)) + "] / " +
                             #                   str(current) + " <> " + str(previous) + " => " +
                             #                   str(result) + "/" + str(changed))
                         elif isinstance(expression, basestring):
-                            self.logger.debug(expression.lower() + " <> " + state)
-                            result = result and expression.lower() == state
+                            self.logger.debug(expression.lower() + " <> " + gate)
+                            result = result and expression.lower() == gate
                             changed = True
                 else:
-                    result = state == "enter"
+                    result = gate == "enter"
                     changed = True
 
                 if result and changed:
@@ -150,55 +202,65 @@ class StateMachine(ModuleMQTT):
                     if 'actions' in condition.keys():
                         for action in condition['actions']:
                             self.logger.debug("Action " + str(action))
-                            if 'only' not in action.keys() or action['only'] == state:
-                                self.execute(action, state in ['normal', 'initialized'])
+                            if 'only' not in action.keys() or action['only'] == gate:
+                                self.execute(action, gate in ['normal', 'initialized'])
 
-    def get_state(self, item, index=0, state=None):
+    def get_state(self, item, key=None, state=None):
         state = self.global_state if state is None else state
         kind = item if isinstance(item, basestring) else self.get_kind(item)
-        index = index if isinstance(item, basestring) else self.get_index(item)
+        key = str(key) if isinstance(item, basestring) else self.get_key(item)
 
         if kind not in state.keys() or state[kind] is None:
-            state[kind] = [None for _ in range(self.MAX_INDEX)]
+            state[kind] = {}
 
-        index = index % self.MAX_INDEX if index >= self.MAX_INDEX else index
-        return state[kind][index]
+        return state[kind][key] if key in state[kind] else None
 
-    def set_state(self, item, index=0, value=None):
+    def set_state(self, item, key=None, value=None):
+        item = self.devices[item] if isinstance(item, basestring) and key is None else item
         kind = item if isinstance(item, basestring) else self.get_kind(item)
-        index = index if isinstance(item, basestring) else self.get_index(item)
+        key = str(key) if isinstance(item, basestring) else self.get_key(item)
 
         if kind not in self.global_state.keys() or self.global_state[kind] is None:
-            self.global_state[kind] = [None for _ in range(self.MAX_INDEX)]
+            self.global_state[kind] = {}
 
-        index = index % self.MAX_INDEX if index >= self.MAX_INDEX else index
         previous_state = copy.deepcopy(self.global_state)
-        previous_value = self.get_state(kind, index)
+        previous_value = self.get_state(kind, key)
         if previous_value != value:
-            self.logger.debug(kind + "[" + str(index) + "]: " + str(previous_value) + " -> " + str(value))
-            self.global_state[kind][index] = value
+            self.logger.debug(kind + "[" + str(key) + "]: " + str(previous_value) + " -> " + str(value))
+            self.global_state[kind][key] = value
             self.evaluate("normal", previous_state)
 
         return previous_value != value
 
     def execute(self, action, with_goto=True):
         # self.logger.debug("Action: " + self.get_kind(action) +
-        #                   "[" + ("N/A" if self.get_index(action) is None else str(self.get_index(action))) + "]: " +
+        #                   "[" + ("N/A" if self.get_key(action) is None else str(self.get_key(action))) + "]: " +
         #                   str(self.get_value(action)))
         if self.get_kind(action) == 'GOTO' or self.get_kind(action) == 'JUMPTO':
             if with_goto or self.get_kind(action) == 'JUMPTO':
                 self.logger.debug("Going to: " + self.get_value(action))
                 self.transit(self.get_value(action))
+        elif self.get_kind(action) == 'bluetooth' and self.bluetooth_server is not None:
+            key = self.get_key(action)
+            if key is None:
+                value = self.template_variables()
+                # self.bluetooth_server.send(yaml.dump(value, default_flow_style=False, encoding='utf-8'))
+                self.bluetooth_server.send(json.dumps(value))
+            else:
+                value = self.get_value(action)
+                value = self.template_variables() if value == 'DUMP' else value
+                # self.bluetooth_server.send(yaml.dump({key: value}, default_flow_style=False, encoding='utf-8'))
+                self.bluetooth_server.send(json.dumps({key: value}))
         elif self.get_kind(action) == 'lcd' and self.lcd is not None:
-            if self.get_index(action) is not None:
-                self.lcd.set_line(self.get_index(action), self.get_value(action))
+            if self.get_key(action) is not None:
+                self.lcd.set_line(int(self.get_key(action)), self.get_value(action))
             else:
                 self.lcd.clear()
                 self.lcd.set(self.get_value(action))
         elif self.get_kind(action) == 'mcp23017' and self.mcp23017 is not None:
-            self.mcp23017.set(self.get_index(action), self.get_value(action))
+            self.mcp23017.set(int(self.get_key(action)), self.get_value(action))
         elif self.get_kind(action) == 'ws281x-indicators' and self.ws281x_indicators is not None:
-            self.ws281x_indicators.set(self.get_index(action), self.get_value(action))
+            self.ws281x_indicators.set(int(self.get_key(action)), self.get_value(action))
         else:
             self.logger.debug("Unknown " + str(self.get_kind(action)) +
-                              "[" + str(self.get_index(action)) + "] executed with " + str(self.get_value(action)))
+                              "[" + str(self.get_key(action)) + "] executed with " + str(self.get_value(action)))

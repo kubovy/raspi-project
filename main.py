@@ -3,9 +3,12 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
+import prctl
 import sys
 import getopt
 import time
+from threading import Thread
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -15,11 +18,17 @@ from ModuleMQTT import *
 debug = False
 logger = Logger("MAIN", debug)
 mqtt_client = None
+mqtt_thread = None
 client_id = None
 modules = []
 
 # Buzzer
 buzzer_pin = 4
+
+# Bluetooth Server
+bluetooth_server_start = True
+bluetooth_server_inbound_ports = [3]
+bluetooth_server_outbound_ports = [4]
 
 # Camera
 camera_state_file = "/run/camera.state"
@@ -103,6 +112,11 @@ interrupted = False
 
 
 class FileWatcherHandler(FileSystemEventHandler):
+
+    def __init__(self):
+        super(FileSystemEventHandler, self).__init__()
+        prctl.set_name("File Watcher")
+
     def on_created(self, event):  # when file is created
         global interrupted
         if event.src_path == '/tmp/raspi-project.stop':
@@ -131,6 +145,10 @@ def initialize(module_names):
         if module_name == "buzzer":
             from Buzzer import Buzzer
             modules.append(Buzzer(mqtt_client, client_id, pin=buzzer_pin, debug=debug))
+        elif module_name == "bluetooth-server":
+            from BluetoothServer import BluetoothServer
+            modules.append(BluetoothServer(mqtt_client, client_id, bluetooth_server_inbound_ports,
+                                           bluetooth_server_outbound_ports, debug=debug))
         elif module_name == "camera":
             from Camera import Camera
             modules.append(Camera(mqtt_client, client_id, state_file=camera_state_file, debug=debug))
@@ -243,6 +261,9 @@ def initialize(module_names):
         if hasattr(module, 'buzzer'):
             from Buzzer import Buzzer
             module.buzzer = next((i for i in modules if isinstance(i, Buzzer)), None)
+        if hasattr(module, 'bluetooth_server'):
+            from BluetoothServer import BluetoothServer
+            module.bluetooth_server = next((i for i in modules if isinstance(i, BluetoothServer)), None)
         if hasattr(module, "infrared_receiver"):
             from InfraredReceiver import InfraredReceiver
             module.infrared_receiver = next((i for i in modules if isinstance(i, InfraredReceiver)), None)
@@ -301,6 +322,10 @@ def initialize(module_names):
     for module in modules:
         autostart = False
 
+        if bluetooth_server_start:
+            from BluetoothServer import BluetoothServer
+            if isinstance(module, BluetoothServer):
+                autostart = True
         if mcp23017_start:
             from MCP23017 import MCP23017
             if isinstance(module, MCP23017):
@@ -327,11 +352,12 @@ def initialize(module_names):
 
 def looper():
     global logger
-    global mqtt_client
+    global mqtt_client, mqtt_thread
 
     observer = Observer()
     event_handler = FileWatcherHandler()  # create event handler
     observer.schedule(event_handler, path='/tmp')
+    observer.daemon = True
     observer.start()
 
     logger.info("Press [CTRL+C] to exit")
@@ -343,7 +369,10 @@ def looper():
         # Other loop*() functions are available that give a threaded interface and a
         # manual interface.
         # mqtt_client.loop_forever(retry_first_connection=True)
-        mqtt_client.loop_start()
+        # mqtt_client.loop_start()
+        mqtt_thread = Thread(target=mqtt_looper)
+        mqtt_thread.daemon = True
+        mqtt_thread.start()
 
         while not interrupted:
             time.sleep(1)
@@ -358,7 +387,9 @@ def looper():
         observer.join(1.0)
 
         logger.debug("Stopping MQTT loop...")
-        mqtt_client.loop_stop()
+        # mqtt_client.loop_stop()
+        mqtt_client.disconnect()
+        mqtt_thread.join(2)
 
         for module in modules:
             stop_method = getattr(module, "stop", None)
@@ -379,6 +410,11 @@ def looper():
         logger.debug("Exiting looper...")
 
 
+def mqtt_looper():
+    prctl.set_name("MQTT Client")
+    mqtt_client.loop_forever(retry_first_connection=True)
+
+
 def help():
     print """Usage client-id [options]:
 
@@ -388,6 +424,7 @@ Options:
   -b, --broker address[:port]                Broker (default: 127.0.0.1, default port: 1883)
   -m, --module name[,name[,...]]             One or more modules to load
       buzzer            : Buzzer
+      bluetooth-server  : Bluetooth Server
       camera            : Camera
       commander         : Commander
       dht11             : DHT11 Temperature and Humidity sensor
@@ -413,33 +450,37 @@ Options:
       ws281x            : WS281x driver
       ws281x-indicators : WS281x driver as indicator LEDs
 
+Bluetooth Server
+  --inbound-ports=port1[,port2[,...]]        Bluetooth inbound ports
+  --outbound-ports=port1[,port2[,...]]       Bluetooth outbound ports
+
 Commander
-  --commander-checks command1:interval1[,command2:interval2[,...]]
+  --commander-checks=command1:interval1[,command2:interval2[,...]]
 
 DHT11
-  --dht11-pin pin                            DHT11 pin
-  --dht11-interval interval                  Refresh interval in seconds
+  --dht11-pin=pin                            DHT11 pin
+  --dht11-interval=interval                  Refresh interval in seconds
 
 MCP23017
   --mcp23017-start                           Start right away
 
 Motion Detector
-  --motion-detector-pin pin                  Motion detector pin
+  --motion-detector-pin=pin                  Motion detector pin
 
 Serial port reader module:
-  --serial-reader-ports port1[,port2[,...]]  Serial ports to read
+  --serial-reader-ports=port1[,port2[,...]]  Serial ports to read
   --serial-reader-start                      Start listening right away
 
 Water Detector
-  --water-detector-pin pin                   Water detector pin
+  --water-detector-pin=pin                   Water detector pin
 
 WS281x Module:
-  --ws281x-led-count count                   Total LED count (default 50)
+  --ws281x-led-count=count                   Total LED count (default 50)
   --ws281x-reverse                           Reverse LED order
-  --ws281x-row-count count                   Number of rows (default 2)
-  --ws281x-row-led-count count               LED count in one row (default 24)
+  --ws281x-row-count=count                   Number of rows (default 2)
+  --ws281x-row-led-count=count               LED count in one row (default 24)
   --ws281x-start                             Start right away
-  --ws281x-startup-file file                 Startup file
+  --ws281x-startup-file=file                 Startup file
 
 """
 
@@ -449,6 +490,7 @@ def main(argv):
     global logger
     global mqtt_client
     global client_id
+    global bluetooth_server_inbound_ports, bluetooth_server_outbound_ports
     global commander_checks
     global dht11_pin, dht11_interval
     global mcp23017_start
@@ -464,6 +506,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, "hdb:m:", [
             "help", "debug", "broker=", "module=",
+            "inbound-ports=", "outbound-ports=",
             "commander-checks=",
             "dht11-pin=", "dht11-interval",
             "mcp23017-start",
@@ -494,6 +537,10 @@ def main(argv):
         elif opt in ("-m", "--module") and arg not in module_names:
             for module_name in arg.split(","):
                 module_names.append(module_name)
+        elif opt == "--inbound-ports":
+            bluetooth_server_inbound_ports = arg.split(",")
+        elif opt == "--outbound-ports":
+            bluetooth_server_outbound_ports = arg.split(",")
         elif opt == "--commander-checks":
             commander_checks = arg
         elif opt == "--dht11-pin":

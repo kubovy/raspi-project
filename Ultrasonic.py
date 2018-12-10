@@ -14,7 +14,7 @@ class Ultrasonic(ModuleLooper):
     delay = 0
 
     def __init__(self, client, service_name, pin_trigger=22, pin_echo=27, debug=False):
-        super(Ultrasonic, self).__init__(client, service_name, "ultrasonic", debug)
+        super(Ultrasonic, self).__init__(client, service_name, "ultrasonic", "Ultrasonic", debug)
         self.pin_echo = pin_echo
         self.pin_trigger = pin_trigger
         self.source = Observable.interval(1000).map(lambda i: self.get_distance())

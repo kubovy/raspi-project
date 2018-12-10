@@ -31,7 +31,7 @@ class RGB(ModuleLooper):
     thread = None
 
     def __init__(self, client, service_name, debug=False):
-        super(RGB, self).__init__(client, service_name, "rgb", debug)
+        super(RGB, self).__init__(client, service_name, "rgb", "RGB", debug)
         self.pi = pigpio.pi()
         self.set_color()
 

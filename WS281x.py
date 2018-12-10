@@ -131,7 +131,7 @@ class WS281x(ModuleLooper):
 
     def __init__(self, client, service_name, startup_file=None,
                  led_count=50, row_led_count=24, row_count=2, reverse=False, debug=False):
-        super(WS281x, self).__init__(client, service_name, "ws281x", debug)
+        super(WS281x, self).__init__(client, service_name, "ws281x", "WS281x", debug)
         # Create NeoPixel object with appropriate configuration.
         self.startup_file = startup_file
         self.led_count = led_count
