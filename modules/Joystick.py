@@ -5,7 +5,7 @@
 #
 import time
 import RPi.GPIO as GPIO
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 class Joystick(ModuleLooper):

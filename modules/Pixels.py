@@ -7,7 +7,7 @@ import time
 from threading import Thread
 import prctl
 from neopixel import *
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 COLOR_BLACK = Color(0, 0, 0)
 COLOR_WHITE = Color(255, 255, 255)

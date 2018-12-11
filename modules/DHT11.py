@@ -7,7 +7,7 @@ import Adafruit_DHT
 import time
 from threading import *
 import traceback
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class DHT11(ModuleMQTT):

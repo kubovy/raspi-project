@@ -5,7 +5,7 @@
 #
 import time
 import threading
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 MODE_RUNNING = "RUNNING"

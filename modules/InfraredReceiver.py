@@ -6,7 +6,7 @@
 import time
 import threading
 import RPi.GPIO as GPIO
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 class InfraredReceiver(ModuleLooper):

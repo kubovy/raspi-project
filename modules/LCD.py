@@ -1,5 +1,8 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
-from ModuleLooper import *
+import math
+import re
+from threading import Timer
+from lib.ModuleLooper import *
 from lib.I2CDevice import I2CDevice
 from time import *
 
@@ -53,6 +56,7 @@ class LCD(ModuleMQTT):
 
     interrupted = False
 
+    bluetooth_server = None
     serial_reader = None
 
     def __init__(self, client, service_name, cols=20, rows=4, address=0x27, debug=False):
@@ -61,7 +65,9 @@ class LCD(ModuleMQTT):
         self.rows = rows
 
         self.device = I2CDevice(address)
+        self.setup()
 
+    def setup(self):
         self.write(0x03)
         self.write(0x03)
         self.write(0x03)
@@ -75,11 +81,15 @@ class LCD(ModuleMQTT):
 
     def on_start(self):
         super(LCD, self).on_start()
+        if self.bluetooth_server is not None:
+            self.bluetooth_server.register(self)
         if self.serial_reader is not None:
             self.serial_reader.register(self)
 
     def on_stop(self):
         super(LCD, self).on_stop()
+        if self.bluetooth_server is not None:
+            self.bluetooth_server.unregister(self)
         if self.serial_reader is not None:
             self.serial_reader.unregister(self)
 
@@ -107,6 +117,13 @@ class LCD(ModuleMQTT):
                 self.logger.error('Oops!')
                 traceback.print_exc()
 
+    def on_bluetooth_message(self, message):
+        parts = message.split(":", 2)  # Anybody can reset a display
+        if len(parts) == 2 and parts[1] == "LCD_RESET":
+            self.logger.debug("Reseting LCD")
+            self.setup()
+            self.clear()
+
     def on_serial_message(self, message):
         try:
             pass  # TODO JK
@@ -114,8 +131,7 @@ class LCD(ModuleMQTT):
             self.logger.error('Oops!  That was no valid JSON.  Try again...')
             traceback.print_exc()
 
-        # clocks EN to latch command
-
+    # clocks EN to latch command
     def strobe(self, data):
         self.device.write_cmd(data | self.En | self.LCD_BACKLIGHT)
         sleep(.0005)
@@ -133,7 +149,9 @@ class LCD(ModuleMQTT):
 
     # turn on/off the lcd backlight
     def backlight(self, state):
-        if state.lower() == "on":
+        if isinstance(state, bool):
+            self.device.write_cmd(self.LCD_BACKLIGHT if state else self.LCD_NOBACKLIGHT)
+        elif state.lower() == "on":
             self.device.write_cmd(self.LCD_BACKLIGHT)
         elif state.lower() == "off":
             self.device.write_cmd(self.LCD_NOBACKLIGHT)
@@ -142,9 +160,13 @@ class LCD(ModuleMQTT):
 
     def set(self, string):
         if string is not None:
-            for i, line in enumerate(string.splitlines()):
+            messages = string.split(":}")
+            message = messages[0].split("{:", 2)
+            for i, line in enumerate(message[0].splitlines()):
                 if i < self.rows:
                     self.set_line(line, i + 1)
+            if len(message) == 2 and len(messages) > 1:
+                Timer(int(message[1]) / 1000.0, self.set, args=["".join(messages[1:])]).start()
 
     def set_line(self, string, line):
         if line == 1:
@@ -156,7 +178,14 @@ class LCD(ModuleMQTT):
         if line == 4:
             self.write(0xD4)
 
-        string = ((string[:(self.cols - 2)] + "..") if len(string) > self.cols else string).ljust(self.cols)
+        alignment = re.search(r'^\|c\|(.*)', string, re.I)
+        if alignment:
+            string = alignment.group(1)
+        string = (string[:(self.cols - 2)] + "..") if len(string) > self.cols else string
+        if alignment:
+            string = string.rjust(int(math.floor((self.cols - len(string)) / 2)) + len(string))
+        string = string.ljust(self.cols)
+
         for char in string:
             self.write(ord(char), self.Rs)
 

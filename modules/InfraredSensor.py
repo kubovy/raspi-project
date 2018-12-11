@@ -6,7 +6,7 @@
 import RPi.GPIO as GPIO
 import time
 from rx import Observable
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 class InfraredSensor(ModuleLooper):

@@ -8,7 +8,7 @@ import ast
 import json
 import math
 from neopixel import *
-from ModuleLooper import *
+from lib.ModuleLooper import *
 
 
 def Color(red, green, blue, white=0):

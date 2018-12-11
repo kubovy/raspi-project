@@ -5,7 +5,7 @@
 #
 import RPi.GPIO as GPIO
 from threading import Timer
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class Buzzer(ModuleMQTT):

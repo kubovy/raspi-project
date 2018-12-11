@@ -1,10 +1,11 @@
 import ast
-import math
+import time
 import traceback
 import json
 import yaml
 import copy
-from ModuleMQTT import ModuleMQTT
+
+from lib.ModuleMQTT import ModuleMQTT
 from jinja2 import Template
 
 
@@ -56,13 +57,14 @@ class StateMachine(ModuleMQTT):
             self.set_state('bluetooth', 'connected', True)
         elif message == "BT:DISCONNECTED":
             self.set_state('bluetooth', 'connected', False)
-            self.execute({'kind': 'lcd', 'key': None, 'value': "\n         BT\n\n--= DISCONNECTED =--"})
+            # self.execute({'kind': 'lcd', 'key': None, 'value': "\n         BT\n\n--= DISCONNECTED =--"})
         elif message.startswith("BT:IDD:"):
             if self.lcd is not None:
                 btid = message[7:]
-                btid = (btid[:(self.lcd.cols - 2)] + "..") if len(btid) > self.lcd.cols else btid
-                btid = btid.rjust(int(math.floor((self.lcd.cols - len(btid)) / 2)) + len(btid))
-                self.execute({'kind': 'lcd', 'key': None, 'value': "\n" + btid + "\n\n--== CONNECTED ==--"})
+                # btid = (btid[:(self.lcd.cols - 2)] + "..") if len(btid) > self.lcd.cols else btid
+                # btid = btid.rjust(int(math.floor((self.lcd.cols - len(btid)) / 2)) + len(btid))
+                self.set_state('bluetooth', 'device', btid)
+                # self.execute({'kind': 'lcd', 'key': None, 'value': "\n" + btid + "\n\n--== CONNECTED ==--"})
         elif message.startswith("TBC:PULL"):
             self.bluetooth_server.send(json.dumps({'devices': self.devices,
                                                    'vars': self.variables,
@@ -72,6 +74,8 @@ class StateMachine(ModuleMQTT):
             self.logger.debug(message + " -> " + message[4:] + " -> " + str(parts))
             if len(parts) == 3 and parts[0] == 'action':
                 self.execute({'name': parts[1], 'value': parts[2], 'eval': True})
+            elif len(parts) >= 2 and parts[0] == 'transit':
+                self.transit(parts[1])
             elif len(parts) == 3:
                 self.set_state('bluetooth', parts[1], parts[2])
 
@@ -143,9 +147,7 @@ class StateMachine(ModuleMQTT):
                     if isinstance(value, basestring):
                         try:
                             value = ast.literal_eval(value)
-                        except IndentationError as e:
-                            self.logger.error(e.message)
-                        except ValueError as e:
+                        except BaseException as e:
                             self.logger.error(e.message)
                 except AttributeError:
                     value = item['value']
@@ -240,11 +242,17 @@ class StateMachine(ModuleMQTT):
         # self.logger.debug("Action: " + self.get_kind(action) +
         #                   "[" + ("N/A" if self.get_key(action) is None else str(self.get_key(action))) + "]: " +
         #                   str(self.get_value(action)))
-        if self.get_kind(action) == 'GOTO' or self.get_kind(action) == 'JUMPTO':
-            if with_goto or self.get_kind(action) == 'JUMPTO':
-                self.logger.debug("Going to: " + self.get_value(action))
-                self.transit(self.get_value(action))
-        elif self.get_kind(action) == 'bluetooth' and self.bluetooth_server is not None:
+        kind = self.get_kind(action)
+
+        if kind == 'GOTO' or kind == 'JUMPTO':
+            if with_goto or kind == 'JUMPTO':
+                state = self.get_key(action)
+                delay = self.get_value(action)
+                self.logger.debug("Going to: " + str(state))
+                if delay is not None:
+                    time.sleep(int(delay) / 1000.0)
+                self.transit(state)
+        elif kind == 'bluetooth' and self.bluetooth_server is not None:
             key = self.get_key(action)
             if key is None:
                 value = self.template_variables()
@@ -255,16 +263,21 @@ class StateMachine(ModuleMQTT):
                 value = self.template_variables() if value == 'DUMP' else value
                 # self.bluetooth_server.send(yaml.dump({key: value}, default_flow_style=False, encoding='utf-8'))
                 self.bluetooth_server.send(json.dumps({key: value}))
-        elif self.get_kind(action) == 'lcd' and self.lcd is not None:
-            if self.get_key(action) is not None:
+        elif kind == 'lcd' and self.lcd is not None:
+            key = self.get_key(action)
+            if key == "clear":
+                self.lcd.clear()
+            elif key == "backlight":
+                self.lcd.backlight(self.get_value(action))
+            elif self.get_key(action) is not None:
                 self.lcd.set_line(int(self.get_key(action)), self.get_value(action))
             else:
                 self.lcd.clear()
                 self.lcd.set(self.get_value(action))
-        elif self.get_kind(action) == 'mcp23017' and self.mcp23017 is not None:
+        elif kind == 'mcp23017' and self.mcp23017 is not None:
             self.mcp23017.set(int(self.get_key(action)), self.get_value(action))
-        elif self.get_kind(action) == 'ws281x-indicators' and self.ws281x_indicators is not None:
+        elif kind == 'ws281x-indicators' and self.ws281x_indicators is not None:
             self.ws281x_indicators.set(int(self.get_key(action)), self.get_value(action))
         else:
-            self.logger.debug("Unknown " + str(self.get_kind(action)) +
+            self.logger.debug("Unknown " + str(kind) +
                               "[" + str(self.get_key(action)) + "] executed with " + str(self.get_value(action)))

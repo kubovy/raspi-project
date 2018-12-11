@@ -3,7 +3,7 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 from threading import Timer
 import time
 import atexit

@@ -5,7 +5,7 @@
 #
 import threading
 from PCA9685 import PCA9685
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class Servo(ModuleMQTT):

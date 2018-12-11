@@ -6,7 +6,7 @@
 # various animations on a strip of NeoPixels.
 import json
 from neopixel import *
-from ModuleLooper import *
+from lib.ModuleLooper import *
 
 
 def Color(red, green, blue, white = 0):

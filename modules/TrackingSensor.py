@@ -5,7 +5,7 @@
 #
 import RPi.GPIO as GPIO
 import time
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 CS = 5
 Clock = 25

@@ -4,7 +4,7 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import RPi.GPIO as GPIO
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class MotionDetector(ModuleMQTT):

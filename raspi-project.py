@@ -7,7 +7,7 @@ import prctl
 import sys
 import getopt
 import time
-from ModuleMQTT import *
+from lib.ModuleMQTT import *
 from modules.Logger import Logger
 from threading import Thread
 from watchdog.observers import Observer

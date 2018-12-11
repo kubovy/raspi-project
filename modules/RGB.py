@@ -5,7 +5,7 @@
 #
 import time
 import pigpio
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 class RGB(ModuleLooper):

@@ -9,7 +9,7 @@ from binascii import crc32
 import traceback
 from threading import Thread
 from bluetooth import *
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 STX = "STX"
 ETX = "ETX"

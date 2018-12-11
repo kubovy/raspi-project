@@ -5,7 +5,7 @@
 #
 import RPi.GPIO as GPIO
 import threading
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class Wheels(ModuleMQTT):

@@ -11,7 +11,7 @@ import time
 from threading import Thread
 import traceback
 
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 STX = "STX"

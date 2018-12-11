@@ -6,7 +6,7 @@
 import os
 import pyinotify
 from subprocess import call
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class EventHandler(pyinotify.ProcessEvent):

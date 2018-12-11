@@ -6,7 +6,7 @@
 import time
 import RPi.GPIO as GPIO
 from rx import Observable
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 class Ultrasonic(ModuleLooper):

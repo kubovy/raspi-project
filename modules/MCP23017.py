@@ -2,7 +2,7 @@ import smbus
 import time
 import math
 
-from ModuleLooper import ModuleLooper
+from lib.ModuleLooper import ModuleLooper
 
 
 class MCP23017(ModuleLooper):

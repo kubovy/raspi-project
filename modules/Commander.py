@@ -6,7 +6,7 @@
 import subprocess
 import traceback
 from threading import *
-from ModuleMQTT import ModuleMQTT
+from lib.ModuleMQTT import ModuleMQTT
 
 
 class Check(object):
