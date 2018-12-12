@@ -79,6 +79,8 @@ class RGB(ModuleLooper):
 
             if self.pattern == self.PATTERN_FADEOUT: self.red = self.green = self.blue = 0
             self.set_color(update=True)
+        else:
+            time.sleep(0.5)
 
     def finalize(self):
         super(RGB, self).finalize()
