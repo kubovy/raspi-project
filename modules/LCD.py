@@ -1,4 +1,8 @@
+#!/usr/bin/python2
+# -*- coding:utf-8 -*-
+#
 # Author: Jan Kubovy (jan@kubovy.eu)
+#
 import math
 import re
 from threading import Timer

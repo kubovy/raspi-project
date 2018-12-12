@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -34,7 +34,8 @@ class DHT11(ModuleMQTT):
                 traceback.print_exc()
 
     def trigger(self):
-        if self.timer is not None: self.timer.cancel()
+        if self.timer is not None:
+            self.timer.cancel()
         humidity, temperature = Adafruit_DHT.read_retry(11, 4)
         self.logger.debug("Temperature=" + str(temperature) + ", Humidity=" + str(humidity))
         self.publish("humidity", str(humidity), 1, True)
@@ -47,4 +48,5 @@ class DHT11(ModuleMQTT):
 
     def finalize(self):
         super(DHT11, self).finalize()
-        if self.timer is not None: self.timer.cancel()
+        if self.timer is not None:
+            self.timer.cancel()

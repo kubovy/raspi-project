@@ -24,7 +24,7 @@ modules = []
 buzzer_pin = 4
 
 # Bluetooth Server
-bluetooth_server_start = True
+bluetooth_server_start = False
 bluetooth_server_inbound_ports = [3]
 bluetooth_server_outbound_ports = [4]
 
@@ -76,7 +76,7 @@ servo_pitch_max = 2800
 # servo_pitch_deg = servo_roll_deg
 
 # State Machine
-state_machine_start = True
+state_machine_start = False
 state_machine_description_file = None
 
 # Ultrasonic
@@ -131,6 +131,7 @@ class FileWatcherHandler(FileSystemEventHandler):
 def initialize(module_names):
     global modules
     global gpio_loaded
+    global bluetooth_server_start, state_machine_start
 
     if [i for i in gpio_modules if i in module_names]:
         import RPi.GPIO as GPIO
@@ -179,9 +180,6 @@ def initialize(module_names):
         elif module_name == "mcp23017":
             from modules.MCP23017 import MCP23017
             modules.append(MCP23017(mqtt_client, client_id, debug=debug))
-        elif module_name == "monitor":
-            from modules.Monitor import Monitor
-            modules.append(Monitor(mqtt_client, client_id, debug=debug))
         elif module_name == "motion-detector":
             from modules.MotionDetector import MotionDetector
             modules.append(MotionDetector(mqtt_client, client_id, pin=motion_detector_pin, debug=debug))
@@ -260,6 +258,7 @@ def initialize(module_names):
             from modules.Buzzer import Buzzer
             module.buzzer = next((i for i in modules if isinstance(i, Buzzer)), None)
         if hasattr(module, 'bluetooth_server'):
+            bluetooth_server_start = True  # starts automatically - no parameter
             from modules.BluetoothServer import BluetoothServer
             module.bluetooth_server = next((i for i in modules if isinstance(i, BluetoothServer)), None)
         if hasattr(module, "infrared_receiver"):
@@ -297,6 +296,7 @@ def initialize(module_names):
             module.servo = next((i for i in modules if isinstance(i, Servo)), None)
         if hasattr(module, "state_machine"):
             from modules.StateMachine import StateMachine
+            state_machine_start = True  # starts automatically - no parameter
             module.state_machine = next((i for i in modules if isinstance(i, StateMachine)), None)
         if hasattr(module, "tracking_sensor"):
             from modules.TrackingSensor import TrackingSensor
@@ -318,29 +318,29 @@ def initialize(module_names):
             module.ws281x_indicators = next((i for i in modules if isinstance(i, WS281xIndicators)), None)
 
     for module in modules:
-        autostart = True
+        autostart = False
 
-        if not bluetooth_server_start:
+        if bluetooth_server_start:
             from modules.BluetoothServer import BluetoothServer
             if isinstance(module, BluetoothServer):
-                autostart = False
-        if not mcp23017_start:
+                autostart = True
+        if mcp23017_start:
             from modules.MCP23017 import MCP23017
             if isinstance(module, MCP23017):
-                autostart = False
-        if not serial_reader_start:
+                autostart = True
+        if serial_reader_start:
             from modules.SerialReader import SerialReader
             if isinstance(module, SerialReader):
-                autostart = False
-        if not state_machine_start:
+                autostart = True
+        if state_machine_start:
             from modules.StateMachine import StateMachine
             if isinstance(module, StateMachine):
-                autostart = False
-        if not ws281x_start:
+                autostart = True
+        if ws281x_start:
             from modules.WS281x import WS281x
             from modules.WS281xIndicators import WS281xIndicators
             if isinstance(module, WS281x) or isinstance(module, WS281xIndicators):
-                autostart = False
+                autostart = True
 
         if autostart:
             start_method = getattr(module, "start", None)
@@ -431,7 +431,6 @@ Options:
       joystick          : Joystick
       lcd               : LCD
       mcp23017          : MCP23017
-      monitor           : Target monitoring
       motion-detector   : Motion detector (HC-SR501 PIR)
       obstacle-avoidance: Obstacle avoidance
       pantilt           : PanTilt HAT

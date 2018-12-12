@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -16,7 +16,7 @@ class InfraredSensor(ModuleLooper):
     def __init__(self, client, service_name, pins=None, debug=False):
         super(InfraredSensor, self).__init__(client, service_name, "ir-sensor", "IR Sensor", debug)
         self.pins = [19, 16] if pins is None else pins
-        self.source = Observable.interval(50).map(lambda i: self.get_state())
+        self.source = Observable.interval(50).map(lambda x: self.get_state())
 
         for i in range(0, len(self.pins)):
             self.state.append(1)

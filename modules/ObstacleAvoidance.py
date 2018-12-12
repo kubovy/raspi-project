@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -13,13 +13,13 @@ MODE_TURNING_LEFT = "TURNING_LEFT"
 MODE_TURNING_RIGHT = "TURNING_RIGHT"
 MODE_CHECK_SPACE = "CHECK_SPACE"
 
-RUNNING_SPEEDS       = [ 10,  30,   50,   75,   85, 100]
-RUNNING_DISTANCES    = [200, 500, 1000, 2000, 2500]
+RUNNING_SPEEDS = [10,  30,   50,   75,   85, 100]
+RUNNING_DISTANCES = [200, 500, 1000, 2000, 2500]
 TURNING_DISTANCE_MIN = 800.0  # mm
-TURNING_SPEED        = 30
+TURNING_SPEED = 30
 
-CHECK_SPEED            = 30
-CHECK_INTERVAL         = 0.09
+CHECK_SPEED = 30
+CHECK_INTERVAL = 0.09
 CHECK_ROUND_ITERATIONS = 26
 
 
@@ -74,13 +74,15 @@ class ObstacleAvoidance(ModuleMQTT):
         if self.right != right:
             self.right_timestamp = time.time() if right == 0 else -1
             self.right = right
-        if not self.mode.startswith("CHECK_"): self.update_wheels()
+        if not self.mode.startswith("CHECK_"):
+            self.update_wheels()
 
     def on_ultrasonic_distance(self, distance):
         if self.distance != distance:
             self.logger.info("Distance: " + str(distance))
             self.distance = distance
-        if not self.mode.startswith("CHECK_"): self.update_wheels()
+        if not self.mode.startswith("CHECK_"):
+            self.update_wheels()
 
     def update_wheels(self):
         if self.mode == MODE_RUNNING and (self.left == 0 or self.right == 0):
@@ -154,7 +156,8 @@ class ObstacleAvoidance(ModuleMQTT):
         #                  + "Left: " + str(self.left) + ", "
         #                  + "Right: " + str(self.right) + ", "
         #                  + "Distance: " + str(self.distance))
-        if self.wheels is not None: self.wheels.move(self.left_speed, self.right_speed, self.interval)
+        if self.wheels is not None:
+            self.wheels.move(self.left_speed, self.right_speed, self.interval)
 
     # def looper(self):
     #    while not self.interrupted:
@@ -188,4 +191,5 @@ class ObstacleAvoidance(ModuleMQTT):
         if self.ultrasonic_subscription is not None:
             self.ultrasonic_subscription.dispose()
             self.ultrasonic_subscription = None
-        if self.wheels is not None: self.wheels.halt()
+        if self.wheels is not None:
+            self.wheels.halt()

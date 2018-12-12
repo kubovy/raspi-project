@@ -1,3 +1,8 @@
+#!/usr/bin/python2
+# -*- coding:utf-8 -*-
+#
+# Author: Jan Kubovy (jan@kubovy.eu)
+#
 import smbus
 import time
 import math

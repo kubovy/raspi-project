@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -7,7 +7,6 @@ from lib.ModuleMQTT import ModuleMQTT
 from threading import Timer
 import time
 import atexit
-
 
 PWM = 0
 WS2812 = 1
@@ -37,7 +36,7 @@ class PanTilt(ModuleMQTT):
                  client,
                  service_name,
                  enable_lights=True,
-                 idle_timeout=2, # Idle timeout in seconds
+                 idle_timeout=2,  # Idle timeout in seconds
                  light_mode=WS2812,
                  light_type=RGB,
                  servo1_min=575,
@@ -102,9 +101,11 @@ class PanTilt(ModuleMQTT):
                 self._i2c = SMBus(1)
             except ImportError:
                 if version_info[0] < 3:
-                    raise ImportError("This library requires python-smbus\nInstall with: sudo apt-get install python-smbus")
+                    raise ImportError("This library requires python-smbus\n" +
+                                      "Install with: sudo apt-get install python-smbus")
                 elif version_info[0] == 3:
-                    raise ImportError("This library requires python3-smbus\nInstall with: sudo apt-get install python3-smbus")
+                    raise ImportError("This library requires python3-smbus\n" +
+                                      "Install with: sudo apt-get install python3-smbus")
 
         self.clear()
         self._set_config()
@@ -141,8 +142,8 @@ class PanTilt(ModuleMQTT):
         config |= self._enable_servo[0]
         config |= self._enable_servo[1] << 1
         config |= self._enable_lights << 2
-        config |= self._light_mode    << 3
-        config |= self._light_on      << 4
+        config |= self._light_mode << 3
+        config |= self._light_on << 4
 
         self._i2c_write_byte(self.REG_CONFIG, config)
 

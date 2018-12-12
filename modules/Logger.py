@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -23,7 +23,8 @@ class Logger:
                 traceback.print_exc()
         
     def debug(self, message):
-        if self.isDebugging: self.__log__(time.ctime() + " DEBUG [" + self.name + "]: " + message)
+        if self.isDebugging:
+            self.__log__(time.ctime() + " DEBUG [" + self.name + "]: " + message)
         # syslog.syslog(syslog.LOG_DEBUG, message)
 
     def info(self, message):

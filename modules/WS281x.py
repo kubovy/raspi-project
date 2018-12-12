@@ -5,16 +5,9 @@
 # Direct port of the Arduino NeoPixel library strandtest example.  Showcases
 # various animations on a strip of NeoPixels.
 import json
-from neopixel import *
+from lib.Color import Color
 from lib.ModuleLooper import *
-
-
-def Color(red, green, blue, white = 0):
-    """Convert the provided red, green, blue color to a 24-bit color value.
-    Each color component should be a value 0-255 where 0 is the lowest intensity
-    and 255 is the highest intensity.
-    """
-    return (white << 24) | (red << 8)| (green << 16) | blue
+from neopixel import *
 
 
 def to_color(data):
@@ -32,7 +25,8 @@ def to_configs(data):
     configs = []
     for item in data:
         config = Config()
-        if 'pattern' in item.keys(): config.pattern = item['pattern']
+        if 'pattern' in item.keys():
+            config.pattern = item['pattern']
         config.color1 = to_color(item['color1']) if 'color1' in item.keys() else None
         config.color2 = to_color(item['color2']) if 'color2' in item.keys() else None
         config.color3 = to_color(item['color3']) if 'color3' in item.keys() else None
@@ -45,17 +39,22 @@ def to_configs(data):
         config.color10 = to_color(item['color10']) if 'color10' in item.keys() else None
         config.color11 = to_color(item['color11']) if 'color11' in item.keys() else None
         config.color12 = to_color(item['color12']) if 'color12' in item.keys() else None
-        if 'wait' in item.keys(): config.wait = item['wait']
-        if 'width' in item.keys(): config.width = item['width']
-        if 'fading' in item.keys(): config.fading = item['fading']
-        if 'min' in item.keys(): config.min = item['min']
-        if 'max' in item.keys(): config.max = item['max']
+        if 'wait' in item.keys():
+            config.wait = item['wait']
+        if 'width' in item.keys():
+            config.width = item['width']
+        if 'fading' in item.keys():
+            config.fading = item['fading']
+        if 'min' in item.keys():
+            config.min = item['min']
+        if 'max' in item.keys():
+            config.max = item['max']
         configs.append(config)
     return configs
 
 
 class Config(object):
-    def __init__(self, pattern="light", color1=0, color2=0,color3=0, color4=0, color5=0, color6=0, color7=0, color8=0,
+    def __init__(self, pattern="light", color1=0, color2=0, color3=0, color4=0, color5=0, color6=0, color7=0, color8=0,
                  color9=0, color10=0, color11=0, color12=0, wait=50, width=3, fading=0, minimum=0, maximum=100):
 
         self.pattern = pattern
@@ -328,7 +327,7 @@ class WS281x(ModuleLooper):
                     percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
                     factor = percent / 100.0
 
-                    color = Color( int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                    color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
                     if row < self.row_count / 2:
                         j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
                     else:
@@ -589,7 +588,8 @@ class WS281x(ModuleLooper):
                 continue
 
             # index = iteration  # start + (iteration % (len(self.data) - start))
-            if iteration > len(self.data): iteration = 0
+            if iteration > len(self.data):
+                iteration = 0
             config = self.data[iteration]
 
             if config.pattern == 'clear':
@@ -652,4 +652,5 @@ class WS281x(ModuleLooper):
                                  maximum=80))
 
             iteration = iteration + 1
-            if iteration >= len(self.data): iteration = 0
+            if iteration >= len(self.data):
+                iteration = 0

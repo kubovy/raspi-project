@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import threading
-from PCA9685 import PCA9685
+from lib.PCA9685 import PCA9685
 from lib.ModuleMQTT import ModuleMQTT
 
 
@@ -46,8 +46,10 @@ class Servo(ModuleMQTT):
         position_min = self.servo_mins[servo]
         position_max = self.servo_maxs[servo]
         original = position
-        if position > position_max: position = position_max
-        if position < position_min: position = position_min
+        if position > position_max:
+            position = position_max
+        if position < position_min:
+            position = position_min
         self.logger.debug(str(original) + " -> " + str(position))
 
         self.publish(str(servo) + "/raw", position, 0, True)
@@ -61,8 +63,10 @@ class Servo(ModuleMQTT):
     def set_position_percent(self, servo, percent):
         position_min = self.servo_mins[servo]
         position_max = self.servo_maxs[servo]
-        if percent > 100: percent = 100
-        if percent < 0: percent = 0
+        if percent > 100:
+            percent = 100
+        if percent < 0:
+            percent = 0
         position = position_min + int((100.0 - float(percent)) * float(position_max - position_min) / 100.0)
         self.logger.debug(str(percent) + "% -> " + str(position))
         self.set_position(servo, position)

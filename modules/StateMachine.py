@@ -1,3 +1,9 @@
+#!/usr/bin/python2
+# -*- coding:utf-8 -*-
+#
+# Author: Mariam Rady (m@ry.am)
+# Author: Jan Kubovy (jan@kubovy.eu)
+#
 import ast
 import time
 import traceback

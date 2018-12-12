@@ -1,13 +1,14 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-import time
-from threading import Thread
-import prctl
-from neopixel import *
+from lib.Color import Color
 from lib.ModuleMQTT import ModuleMQTT
+from neopixel import *
+import prctl
+from threading import Thread
+import time
 
 COLOR_BLACK = Color(0, 0, 0)
 COLOR_WHITE = Color(255, 255, 255)
@@ -28,13 +29,13 @@ def to_colors(configs):
 class Pixels(ModuleMQTT):
 
     # Neopixel
-    LED_COUNT      = 4      # Number of LED pixels.
-    LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
-    LED_DMA        = 5       # DMA channel to use for generating signal (try 5)
-    LED_BRIGHTNESS = 255     # Set to 0 for darkest and 255 for brightest
-    LED_INVERT     = False   # True to invert the signal (when using NPN transistor level shift)
-    LED_CHANNEL    = 0
-    LED_STRIP      = ws.WS2811_STRIP_GRB
+    LED_COUNT = 4         # Number of LED pixels.
+    LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
+    LED_DMA = 5           # DMA channel to use for generating signal (try 5)
+    LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
+    LED_INVERT = False    # True to invert the signal (when using NPN transistor level shift)
+    LED_CHANNEL = 0
+    LED_STRIP = ws.WS2811_STRIP_GRB
 
     pixel_leds = []
     notify_configs = []

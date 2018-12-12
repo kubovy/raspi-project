@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -79,10 +79,12 @@ class Joystick(ModuleLooper):
                 self.publish("center", "OPEN", 1, True)
                 self.state = self.pin_center
             if self.control == "CAMERA" and self.servo is not None:
-                if self.buzzer is not None: self.buzzer.on()
+                if self.buzzer is not None:
+                    self.buzzer.on()
             if self.control == "MOVEMENT" and self.wheels is not None:
                 self.wheels.halt()
-                if self.buzzer is not None: self.buzzer.on()
+                if self.buzzer is not None:
+                    self.buzzer.on()
         elif GPIO.input(self.pin_a) == 0:
             if self.state != self.pin_a:
                 self.logger.info("UP")
@@ -131,14 +133,21 @@ class Joystick(ModuleLooper):
             if self.state != self.NONE:
                 self.logger.info("NONE")
                 self.publish("button", "NONE", 1, True)
-                if self.state == self.pin_center: self.publish("center", "CLOSED", 1, True)
-                elif self.state == self.pin_a: self.publish("up", "CLOSED", 1, True)
-                elif self.state == self.pin_b: self.publish("right", "CLOSED", 1, True)
-                elif self.state == self.pin_c: self.publish("down", "CLOSED", 1, True)
-                elif self.state == self.pin_d: self.publish("left", "CLOSED", 1, True)
+                if self.state == self.pin_center:
+                    self.publish("center", "CLOSED", 1, True)
+                elif self.state == self.pin_a:
+                    self.publish("up", "CLOSED", 1, True)
+                elif self.state == self.pin_b:
+                    self.publish("right", "CLOSED", 1, True)
+                elif self.state == self.pin_c:
+                    self.publish("down", "CLOSED", 1, True)
+                elif self.state == self.pin_d:
+                    self.publish("left", "CLOSED", 1, True)
                 self.state = self.NONE
-                if self.buzzer is not None: self.buzzer.off()
-                if self.wheels is not None: self.wheels.halt()
+                if self.buzzer is not None:
+                    self.buzzer.off()
+                if self.wheels is not None:
+                    self.wheels.halt()
 
         time.sleep(0.2)
 

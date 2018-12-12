@@ -10,20 +10,20 @@ from lib.ModuleLooper import ModuleLooper
 
 class RGB(ModuleLooper):
 
-    PIN_RED   = 17
+    PIN_RED = 17
     PIN_GREEN = 22
-    PIN_BLUE  = 24
+    PIN_BLUE = 24
 
-    PATTERN_FADEIN  = "fade-in"
+    PATTERN_FADEIN = "fade-in"
     PATTERN_FADEOUT = "fade-out"
 
     INTERVAL_DEFAULT = 0.05  # Seconds
-    STEP_DEFAULT     = 5     # Percent
+    STEP_DEFAULT = 5     # Percent
 
-    red      = 0
-    green    = 0
-    blue     = 0
-    pattern  = ""
+    red = 0
+    green = 0
+    blue = 0
+    pattern = ""
     step = STEP_DEFAULT
     interval = INTERVAL_DEFAULT
 
@@ -61,7 +61,8 @@ class RGB(ModuleLooper):
         self.pi.set_PWM_dutycycle(self.PIN_GREEN, green)
         self.pi.set_PWM_dutycycle(self.PIN_BLUE, blue)
         if update:
-            self.client.publish(self.service_name + "/state/rgb", str(red) + "," + str(green) + "," + str(blue), 1, True)
+            self.client.publish(self.service_name + "/state/rgb",
+                                str(red) + "," + str(green) + "," + str(blue), 1, True)
 
     def looper(self):
         if self.pattern == self.PATTERN_FADEIN or self.pattern == self.PATTERN_FADEOUT:
@@ -75,9 +76,11 @@ class RGB(ModuleLooper):
                 blue = int(float(self.blue) * float(percent) / 100.0)
                 self.set_color(red=red, green=green, blue=blue, update=False)
                 time.sleep(self.interval)
-                if self.interrupted: break
+                if self.interrupted:
+                    break
 
-            if self.pattern == self.PATTERN_FADEOUT: self.red = self.green = self.blue = 0
+            if self.pattern == self.PATTERN_FADEOUT:
+                self.red = self.green = self.blue = 0
             self.set_color(update=True)
         else:
             time.sleep(0.5)
@@ -85,4 +88,3 @@ class RGB(ModuleLooper):
     def finalize(self):
         super(RGB, self).finalize()
         self.pi.stop()
-

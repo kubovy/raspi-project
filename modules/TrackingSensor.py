@@ -138,7 +138,7 @@ class TrackingSensor(ModuleLooper):
         # print("readCalibrated",sensor_values)
         return sensor_values
             
-    def read_line(self, white_line = 0):
+    def read_line(self, white_line=0):
         """
         Operates the same as read calibrated, but also returns an
         estimated position of the robot with respect to a line. The
@@ -199,7 +199,8 @@ class TrackingSensor(ModuleLooper):
             self.publish("", str(data), 0, False)
         else:
             self.delay = 0 if (payload == "OFF") else float(payload)
-            if self.delay <= 0: self.delay = 0
+            if self.delay <= 0:
+                self.delay = 0
             self.publish("delay", str(self.delay), 1, False)
             self.last = -1 if (self.delay <= 0) else time.time() * 1000.0
             self.logger.info("Measuring track each " + str(self.delay) + "ms")

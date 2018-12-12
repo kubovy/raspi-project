@@ -1,11 +1,12 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-import RPi.GPIO as GPIO
-import threading
 from lib.ModuleMQTT import ModuleMQTT
+import prctl
+import RPi.GPIO as GPIO
+from threading import Timer
 
 
 class Wheels(ModuleMQTT):
@@ -122,13 +123,20 @@ class Wheels(ModuleMQTT):
             self.pwm_left.ChangeDutyCycle(0 - left)
 
     def move(self, left=None, right=None, timeout=DEFAULT_TIMEOUT):
-        if left is None: left = self.left_speed
-        if right is None: right = self.right_speed
-        if self.timer is not None: self.timer.cancel()
-        if left < -100: left = -100
-        if left > 100: left = 100
-        if right < -100: left = -100
-        if right > 100: left = 100
+        if left is None:
+            left = self.left_speed
+        if right is None:
+            right = self.right_speed
+        if self.timer is not None:
+            self.timer.cancel()
+        if left < -100:
+            left = -100
+        if left > 100:
+            left = 100
+        if right < -100:
+            left = -100
+        if right > 100:
+            left = 100
         self.set_motor(left, right)
 
         if self.left != left:
@@ -141,9 +149,11 @@ class Wheels(ModuleMQTT):
 
         self.left = left
         self.right = right
-        if timeout > 0: self.timer = threading.Timer(timeout, self.halt).start()
+        if timeout > 0:
+            self.timer = Timer(timeout, self.halt).start()
 
     def halt(self):
+        prctl.set_name("Wheel Timer")
         self.pwm_right.ChangeDutyCycle(0)
         self.pwm_left.ChangeDutyCycle(0)
         GPIO.output(self.pin_right_forward, GPIO.LOW)

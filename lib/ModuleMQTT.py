@@ -17,6 +17,7 @@ class ModuleMQTT(Module):
         self.service_name = service_name
         self.module_name = module_name
         self.subscription = self.service_name + "/control/" + module_name + "/#"
+        self.logger.debug("Subcribing to MQTT topic: " + self.subscription)
 
         self.client.message_callback_add(self.subscription, self.__on_message__)
 

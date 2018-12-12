@@ -6,17 +6,10 @@
 # various animations on a strip of NeoPixels.
 import ast
 import json
+from lib.Color import Color
+from lib.ModuleLooper import *
 import math
 from neopixel import *
-from lib.ModuleLooper import *
-
-
-def Color(red, green, blue, white=0):
-    """Convert the provided red, green, blue color to a 24-bit color value.
-    Each color component should be a value 0-255 where 0 is the lowest intensity
-    and 255 is the highest intensity.
-    """
-    return (white << 24) | (red << 8)| (green << 16) | blue
 
 
 def to_color(data):
@@ -44,7 +37,7 @@ def to_configs(data):
 
 
 class Config(object):
-    def __init__(self, pattern="light", color=0, wait=50, width=3, fading=0, minimum=0, maximum=100):
+    def __init__(self, pattern="light", color=0, wait=50, minimum=0, maximum=100):
 
         self.pattern = pattern
         self.color = color

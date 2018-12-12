@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 # -*- coding:utf-8 -*-
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
@@ -71,4 +71,5 @@ class Commander(ModuleMQTT):
         super(Commander, self).finalize()
         for key in self.timer_map.keys():
             self.logger.debug("Timer " + key + " = " + str(self.timer_map[key]))
-            if self.timer_map[key] is not None: self.timer_map[key].cancel()
+            if self.timer_map[key] is not None:
+                self.timer_map[key].cancel()
