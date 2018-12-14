@@ -3,7 +3,6 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-from lib.Color import Color
 from lib.ModuleMQTT import ModuleMQTT
 from neopixel import *
 import prctl
