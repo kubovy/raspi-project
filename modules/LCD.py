@@ -105,6 +105,10 @@ class LCD(ModuleMQTT):
     def on_mqtt_message(self, path, payload):
         if len(path) == 1 and path[0] == "clear":
             self.clear()
+        elif len(path) == 1 and path[0] == "reset":
+            self.logger.debug("Reseting LCD")
+            self.setup()
+            self.clear()
         elif len(path) == 1 and path[0] == "backlight":
             self.backlight(payload)
         elif len(path) == 1:

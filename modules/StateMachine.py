@@ -157,8 +157,11 @@ class StateMachine(ModuleMQTT):
                             self.logger.error(e.message)
                 except AttributeError:
                     value = item['value']
-            else:
+            elif 'value' in item.keys():
                 value = item['value']
+            else:
+                self.logger.warn("No value in: " + str(item))
+                value = None
 
             return self.variables[value] if value in self.variables.keys() else value
         except:
@@ -272,6 +275,9 @@ class StateMachine(ModuleMQTT):
         elif kind == 'lcd' and self.lcd is not None:
             key = self.get_key(action)
             if key == "clear":
+                self.lcd.clear()
+            elif key == "reset":
+                self.lcd.setup()
                 self.lcd.clear()
             elif key == "backlight":
                 self.lcd.backlight(self.get_value(action))
