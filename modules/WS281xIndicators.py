@@ -6,13 +6,15 @@
 # various animations on a strip of NeoPixels.
 import ast
 import json
+
+from lib.ColorGRB import ColorGRB
 from lib.ModuleLooper import *
 import math
 from neopixel import *
 
 
 def to_color(data):
-    return Color(data['red'], data['green'], data['blue'])
+    return ColorGRB(data['red'], data['green'], data['blue'])
 
 
 def dump_color(color):
@@ -57,7 +59,7 @@ class WS281xIndicators(ModuleLooper):
     LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
     LED_INVERT = False  # True to invert the signal (when using NPN transistor level shift)
     LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
-    LED_STRIP = ws.WS2811_STRIP_RGB  # Strip type and colour ordering
+    LED_STRIP = ws.WS2811_STRIP_GRB  # Strip type and colour ordering
 
     LOOP_WAIT = 10  # ms
 
@@ -77,7 +79,7 @@ class WS281xIndicators(ModuleLooper):
         # Intialize the library (must be called once before other functions).
         self.strip.begin()
         for led in range(self.led_count):
-            self.strip.setPixelColor(led, Color(0, 0, 0))
+            self.strip.setPixelColor(led, ColorGRB(0, 0, 0))
             self.strip.show()
 
     def set(self, index, payload):
@@ -158,7 +160,7 @@ class WS281xIndicators(ModuleLooper):
                         percent = step + config.min if ((step + config.min) < config.max) else \
                             config.max - (step + config.min - config.max)
                         factor = float(percent) / 100.0
-                        color = Color(int(float((config.color & (255 << 8)) >> 8) * factor),
+                        color = ColorGRB(int(float((config.color & (255 << 8)) >> 8) * factor),
                                       int(float((config.color & (255 << 16)) >> 16) * factor),
                                       int(float((config.color & 255)) * factor))
                         self.strip.setPixelColor(led, color)
@@ -167,7 +169,7 @@ class WS281xIndicators(ModuleLooper):
                         percent = step + config.min if ((step + config.min) < config.max) else \
                             config.max - (step + config.min - config.max)
                         factor = float(percent) / 100.0
-                        color = Color(int(float((config.color & (255 << 8)) >> 8) * factor),
+                        color = ColorGRB(int(float((config.color & (255 << 8)) >> 8) * factor),
                                       int(float((config.color & (255 << 16)) >> 16) * factor),
                                       int(float((config.color & 255)) * factor))
                         self.strip.setPixelColor(led, color)

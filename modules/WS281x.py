@@ -5,12 +5,14 @@
 # Direct port of the Arduino NeoPixel library strandtest example.  Showcases
 # various animations on a strip of NeoPixels.
 import json
+
+from lib.ColorGRB import ColorGRB
 from lib.ModuleLooper import *
 from neopixel import *
 
 
 def to_color(data):
-    return Color(data['red'], data['green'], data['blue'])
+    return ColorGRB(data['red'], data['green'], data['blue'])
 
 
 def dump_color(color):
@@ -86,13 +88,13 @@ class Config(object):
 def wheel(pos):
     """Generate rainbow colors across 0-255 positions."""
     if pos < 85:
-        return Color(pos * 3, 255 - pos * 3, 0)
+        return ColorGRB(pos * 3, 255 - pos * 3, 0)
     elif pos < 170:
         pos -= 85
-        return Color(255 - pos * 3, 0, pos * 3)
+        return ColorGRB(255 - pos * 3, 0, pos * 3)
     else:
         pos -= 170
-        return Color(0, pos * 3, 255 - pos * 3)
+        return ColorGRB(0, pos * 3, 255 - pos * 3)
 
 
 class WS281x(ModuleLooper):
@@ -104,7 +106,7 @@ class WS281x(ModuleLooper):
     LED_BRIGHTNESS = 255  # Set to 0 for darkest and 255 for brightest
     LED_INVERT = False  # True to invert the signal (when using NPN transistor level shift)
     LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
-    LED_STRIP = ws.WS2811_STRIP_RGB  # Strip type and colour ordering
+    LED_STRIP = ws.WS2811_STRIP_GRB  # Strip type and colour ordering
 
     data = to_configs(json.loads(json.dumps([{
         'pattern': 'fade',
@@ -281,7 +283,7 @@ class WS281x(ModuleLooper):
                 for w in range(config.width):
                     percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
                     factor = percent / 100.0
-                    color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                    color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
                     j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
                     self.__set_pixel_color(j + (row * self.row_led_count), color)
 
@@ -326,7 +328,7 @@ class WS281x(ModuleLooper):
                     percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
                     factor = percent / 100.0
 
-                    color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                    color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
                     if row < self.row_count / 2:
                         j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
                     else:
@@ -358,8 +360,8 @@ class WS281x(ModuleLooper):
                 for w in range(config.width):
                     percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
                     factor = percent / 100.0
-                    color1 = Color(int(float(red1) * factor), int(float(green1) * factor), int(float(blue1) * factor))
-                    color2 = Color(int(float(red2) * factor), int(float(green2) * factor), int(float(blue2) * factor))
+                    color1 = ColorGRB(int(float(red1) * factor), int(float(green1) * factor), int(float(blue1) * factor))
+                    color2 = ColorGRB(int(float(red2) * factor), int(float(green2) * factor), int(float(blue2) * factor))
 
                     half = self.row_led_count / 2
                     j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
@@ -386,7 +388,7 @@ class WS281x(ModuleLooper):
                 red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
                 green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
                 blue = (self.__color__(config, str(row)) & 255)
-                color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
                 for i in range(self.row_led_count):
                     self.__set_pixel_color(i + (row * self.row_led_count), color)
 
@@ -411,7 +413,7 @@ class WS281x(ModuleLooper):
                 red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
                 green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
                 blue = (self.__color__(config, str(row)) & 255)
-                color = Color(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
+                color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
                 for i in range(self.row_led_count):
                     self.__set_pixel_color(i + (row * self.row_led_count), color)
 
@@ -638,14 +640,14 @@ class WS281x(ModuleLooper):
             elif config.pattern == 'wait':
                 time.sleep(config.wait / 1000.0)
             else:
-                self.fade(Config(color1=Color(16, 16, 16),
-                                 color2=Color(16, 16, 16),
-                                 color3=Color(16, 16, 16),
-                                 color4=Color(16, 16, 16),
-                                 color5=Color(16, 16, 16),
-                                 color6=Color(16, 16, 16),
-                                 color7=Color(16, 16, 16),
-                                 color8=Color(16, 16, 16),
+                self.fade(Config(color1=ColorGRB(16, 16, 16),
+                                 color2=ColorGRB(16, 16, 16),
+                                 color3=ColorGRB(16, 16, 16),
+                                 color4=ColorGRB(16, 16, 16),
+                                 color5=ColorGRB(16, 16, 16),
+                                 color6=ColorGRB(16, 16, 16),
+                                 color7=ColorGRB(16, 16, 16),
+                                 color8=ColorGRB(16, 16, 16),
                                  wait=10,
                                  minimum=50,
                                  maximum=80))
