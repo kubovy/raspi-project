@@ -27,13 +27,14 @@ def dump_color(color):
 def to_configs(data):
     configs = []
     for item in data:
-        config = Config()
-        config.pattern = item['pattern'] if 'pattern' in item.keys() else 'light'
-        config.color = to_color(item['color']) if 'color' in item.keys() else None
-        config.wait = item['wait'] if 'wait' in item.keys() else 50
-        config.min = item['min'] if 'min' in item.keys() else 0
-        config.max = item['max'] if 'max' in item.keys() else 0
-        configs.append(config)
+        if item is not None:
+            config = Config()
+            config.pattern = item['pattern'] if 'pattern' in item.keys() else 'light'
+            config.color = to_color(item['color']) if 'color' in item.keys() else None
+            config.wait = item['wait'] if 'wait' in item.keys() else 50
+            config.min = item['min'] if 'min' in item.keys() else 0
+            config.max = item['max'] if 'max' in item.keys() else 0
+            configs.append(config)
     return configs
 
 
@@ -95,8 +96,10 @@ class WS281xIndicators(ModuleLooper):
                     data = [ast.literal_eval(payload)]
                 except ValueError as e:
                     self.logger.error(e.message)
-        else:
+        elif payload is not None:
             data = [payload]
+        else:
+            data = None
 
         if data is not None:
             self.data[index] = to_configs(data)

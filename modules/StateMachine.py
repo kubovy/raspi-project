@@ -76,14 +76,15 @@ class StateMachine(ModuleMQTT):
                                                    'vars': self.variables,
                                                    'states': self.states.values()}))
         elif message.startswith("TBC:"):
-            parts = message[4:].split(",", 3)
-            self.logger.debug(message + " -> " + message[4:] + " -> " + str(parts))
-            if len(parts) == 3 and parts[0] == 'action':
-                self.execute({'name': parts[1], 'value': parts[2], 'eval': True})
-            elif len(parts) >= 2 and parts[0] == 'transit':
-                self.transit(parts[1])
-            elif len(parts) == 3:
-                self.set_state('bluetooth', parts[1], parts[2])
+            for msg in message[4:].split(";"):
+                parts = msg.split(",", 3)
+                self.logger.debug(msg + " -> " + msg[4:] + " -> " + str(parts))
+                if len(parts) == 3 and parts[0] == 'action':
+                    self.execute({'name': parts[1], 'value': parts[2], 'eval': True})
+                elif len(parts) >= 2 and parts[0] == 'transit':
+                    self.transit(parts[1])
+                elif len(parts) == 3:
+                    self.set_state('bluetooth', parts[1], parts[2])
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 2:
@@ -281,11 +282,15 @@ class StateMachine(ModuleMQTT):
                 self.lcd.clear()
             elif key == "backlight":
                 self.lcd.backlight(self.get_value(action))
-            elif self.get_key(action) is not None:
-                self.lcd.set_line(int(self.get_key(action)), self.get_value(action))
+            elif key is not None:
+                value = self.get_value(action)
+                if value != "IGNORE":
+                    self.lcd.set_line(int(key), value)
             else:
-                self.lcd.clear()
-                self.lcd.set(self.get_value(action))
+                value = self.get_value(action)
+                if value != "IGNORE":
+                    self.lcd.clear()
+                    self.lcd.set(value)
         elif kind == 'mcp23017' and self.mcp23017 is not None:
             self.mcp23017.set(int(self.get_key(action)), self.get_value(action))
         elif kind == 'ws281x-indicators' and self.ws281x_indicators is not None:
