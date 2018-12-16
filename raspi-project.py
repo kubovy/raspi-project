@@ -214,6 +214,9 @@ def initialize(module_names):
         elif module_name == "state-machine":
             from modules.StateMachine import StateMachine
             modules.append(StateMachine(mqtt_client, client_id, state_machine_description_file, debug=debug))
+        elif module_name == "switch":
+            from modules.Switch import Switch
+            modules.append(Switch(mqtt_client, client_id, debug=debug))
         elif module_name == "tracking-sensor":
             from modules.TrackingSensor import TrackingSensor
             modules.append(TrackingSensor(mqtt_client, client_id, debug=debug))
@@ -298,6 +301,9 @@ def initialize(module_names):
             from modules.StateMachine import StateMachine
             state_machine_start = True  # starts automatically - no parameter
             module.state_machine = next((i for i in modules if isinstance(i, StateMachine)), None)
+        if hasattr(module, "switch"):
+            from modules.Switch import Switch
+            module.switch = next((i for i in modules if isinstance(i, Switch)), None)
         if hasattr(module, "tracking_sensor"):
             from modules.TrackingSensor import TrackingSensor
             module.tracking_sensor = next((i for i in modules if isinstance(i, TrackingSensor)), None)
@@ -440,6 +446,7 @@ Options:
       rgb               : RGB Strip
       servo             : Camera servos
       state-machine     : State machine
+      switch            : Simple switch
       tracking-sensor   : Tracking sensor
       ultrasonic        : Ultrasonic distance sensor
       water-detector    : Water detector (Flying Fish MH Sensor)
@@ -601,7 +608,7 @@ def on_connect(client, userdata, flags, rc):
 # noinspection PyUnusedLocal
 def on_disconnect(client, userdata, rc):
     if rc != 0:
-        logger.error("Unexpected disconnection.")
+        logger.error("Unexpected disconnection with code " + str(rc) + ": " + str(userdata))
 
 
 # The callback for when a PUBLISH message is received from the server.
