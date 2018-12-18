@@ -1,4 +1,4 @@
-# Raspberry Pi Zero Alphabot 2 Controll System
+# Raspberry Pi Project
 
 ## MQTT API
 
@@ -10,23 +10,18 @@ Every state change SHOULD be accompanied by a `{service}/state/#` message publis
   | Topic                                      | Type | Payload                                    | Description                                                             |
   | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/status`                   | PUB  | `OPEN`/`CLOSED`                            | Node's connection is `OPEN` or `CLOSED`                                 |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/buzzer`                   | PUB  | `ON`/`OFF`                                 | Buzzer is `ON` or `OFF`                                                 |
   | `{service}/control/buzzer`                 | SUB  | `ON`/`OFF`                                 | Sets buzzer `ON` or `OFF`                                               |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/servo/{servo}/raw`        | PUB  | _RAW_                                      | The _RAW_ value of a servo's state                                      |
   | `{service}/state/servo/{servo}/percent`    | PUB  | _PERCENT_                                  | The _PERCENT_ value of a servo's state                                  |
   | `{service}/control/camera/{servo}[/{type}]`| SUB  | Integer                                    | Sets the servo's position as `type` (`pecent`, `degrees` or _RAW_)      |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/ir-receiver/state`        | PUB  | `ON`/`OFF`                                 | IR receiver's listening state is `ON` or `OFF`                          |
   | `{service}/state/ir-receiver/control`      | PUB  | `ON`/`OFF`                                 | IR receiver control state is `ON` or `OFF`                              |
   | `{service}/state/ir-receiver/key`          | PUB  | Integer                                    | Received key code form the IR remote control                            |
   | `{service}/control/ir-receiver/state`      | SUB  | `ON`/`OFF`/`CONTROL`                       | Sets the IR receiver's listening state `ON`, `OFF` or in `CONTROL` mode |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/ir-sensor/state`          | PUB  | `ON`/`OFF`                                 | IR sensors listening state is `ON` or `OFF`                             |
   | `{service}/state/ir-sensor/{id}`           | PUB  | `OPEN`/`CLOSED`                            | IR sensor with `id` is `OPEN` or `CLOSED`                               |
   | `{service}/control/ir-sensor/state`        | SUB  | `ON`/`OFF`                                 | Sets the IR sensors listening state `ON` or `OFF`                       |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/joystick/state`           | PUB  | `ON`/`OFF`                                 | Joystick's listening state is `ON` or `OFF`                             |
   | `{service}/state/joystick/button`          | PUB  | `NONE`/`UP`/`DOWN`/`RIGHT`/`LEFT`/`CENTER` | Joystick's position                                                     |
   | `{service}/state/joystick/center`          | PUB  | `OPEN`/`CLOSED`                            | Joystick's center state                                                 |
@@ -37,26 +32,20 @@ Every state change SHOULD be accompanied by a `{service}/state/#` message publis
   | `{service}/state/joystick/control`         | PUB  | `OFF`/`MOVEMENT`/`CAMERA`                  | Joystick's control state                                                |
   | `{service}/control/joystick/state`         | SUB  | `ON`/`OFF`                                 | Sets the Joystick's listening state `ON` or `OFF`                       |
   | `{service}/control/joystick/control`       | SUB  | `OFF`/`MOVEMENT`/`CAMERA`                  | Sets the Joystick's control state.                                      |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/motion`                   | PUB  | `OPEN`/`CLOSED`                            | Motion detected (`OPEN`) or no motion detected (`CLOSED`)               |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/led/{pixel}`              | PUB  | `R,G,B`                                    | Color of for particular `PIXEL`                                         |
   | `{service}/control/led[/{pixel}]`          | SUB  | `R,G,B`/`R,G,B,PIXEL`                      | Sets a color for particular `PIXEL`                                     |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/rgb/`                     | PUB  | `R,G,B`                                    | Color ot the led strip                                                  |
   | `{service}/control/rgb/`                   | SUB  | `R,G,B`                                    | Set the led strip's color.                                              |
   | `{service}/control/rgb/{pattern}`          | SUB  | `R,G,B,step,intrerval`                     |                                                                         |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/tracking`                 | PUB  | `ON`/`OFF`                                 |                                                                         |
   | `{service}/state/tracking`                 | PUB  | `MEASURE`                                  |                                                                         |
   | `{service}/state/tracking/delay`           | PUB  | Integer                                    |                                                                         |
   | `{service}/control/tracking`               | SUB  | `ON`/`OFF`                                 |                                                                         |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/ultrasonic/state`         | PUB  | `ON`/`OFF`                                 |                                                                         |
   | `{service}/state/ultrasonic`               | PUB  | `MEASURE`                                  |                                                                         |
   | `{service}/state/ultrasonic/delay`         | PUB  | Integer                                    |                                                                         |
   | `{service}/control/ultrasonic/state`       | SUB  | `ON`/`OFF`                                 |                                                                         |
-  | ------------------------------------------ | ---- | ------------------------------------------ | ----------------------------------------------------------------------- |
   | `{service}/state/move`                     | PUB  | `LEFT RIGHT TIMEOUT`                       |                                                                         |
   | `{service}/control/move/[direction]`       | SUB  | `SPEED TIMEOUT`                            |                                                                         |
   | `{service}/control/rotate/[direction]`     | SUB  | `SPEED TIMEOUT`                            |                                                                         |
