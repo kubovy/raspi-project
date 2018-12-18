@@ -3,50 +3,58 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-import Adafruit_DHT
 import time
-from threading import *
 import traceback
-from lib.ModuleMQTT import ModuleMQTT
+from threading import *
+
+import Adafruit_DHT
+
+from lib.Module import Module
 
 
-class DHT11(ModuleMQTT):
-    timer = None
+class DHT11(Module):
+    module_mqtt = None
 
-    def __init__(self, client, service_name, pin=4, interval=60, debug=False):
-        super(DHT11, self).__init__(client, service_name, "dht11", debug)
-        self.pin = pin
-        self.interval = interval
-        self.trigger()
+    __timer = None
+
+    def __init__(self, pin=4, interval=60, debug=False):
+        super(DHT11, self).__init__(debug=debug)
+        self.__interval = interval
+        self.logger.debug("Pin: " + str(pin) + ", interval: " + str(interval))
+        
+    def initialize(self):
+        super(DHT11, self).initialize()
+        self.__trigger()
+
+    def finalize(self):
+        super(DHT11, self).finalize()
+        if self.__timer is not None:
+            self.__timer.cancel()
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 0:
             if payload == "ON":
-                self.trigger()
-            else:
-                self.timer.cancel()
+                self.__trigger()
+            elif self.__timer is not None:
+                self.__timer.cancel()
         if len(path) == 1 and path[0] == "interval":
             try:
-                self.interval = float(payload)
-                self.trigger()
+                self.__interval = float(payload)
+                self.__trigger()
             except:
                 self.logger.error("Unexpected Error!")
                 traceback.print_exc()
 
-    def trigger(self):
-        if self.timer is not None:
-            self.timer.cancel()
+    def __trigger(self):
+        if self.__timer is not None:
+            self.__timer.cancel()
         humidity, temperature = Adafruit_DHT.read_retry(11, 4)
         self.logger.debug("Temperature=" + str(temperature) + ", Humidity=" + str(humidity))
-        self.publish("humidity", str(humidity), 1, True)
-        self.publish("temperature", str(temperature), 1, True)
-        self.publish("last-update", str(int(round(time.time()))))
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("humidity", str(humidity), retrain=True, module=self)
+            self.module_mqtt.publish("temperature", str(temperature), retrain=True, module=self)
+            self.module_mqtt.publish("last-update", str(int(round(time.time()))), retrain=True, module=self)
 
         if not self.finalizing:
-            self.timer = Timer(self.interval, self.trigger)
-            self.timer.start()
-
-    def finalize(self):
-        super(DHT11, self).finalize()
-        if self.timer is not None:
-            self.timer.cancel()
+            self.__timer = Timer(self.__interval, self.__trigger)
+            self.__timer.start()

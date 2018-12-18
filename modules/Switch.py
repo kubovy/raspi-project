@@ -4,81 +4,85 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import time
+
 import pigpio
+
 from lib.ModuleLooper import ModuleLooper
 
 
 class Switch(ModuleLooper):
-
-    PIN = 17
+    """Switch module"""
 
     PATTERN_FADEIN = "fade-in"
     PATTERN_FADEOUT = "fade-out"
 
     INTERVAL_DEFAULT = 0.05  # Seconds
-    STEP_DEFAULT = 5     # Percent
+    STEP_DEFAULT = 5  # Percent
     COUNT_DEFAULT = None
 
-    switch = 0
-    pattern = ""
-    step = STEP_DEFAULT
-    interval = INTERVAL_DEFAULT
-    count = COUNT_DEFAULT
+    __value = 0
+    __pattern = ""
+    __step = STEP_DEFAULT
+    __interval = INTERVAL_DEFAULT
+    __count = COUNT_DEFAULT
+    __iteration = 0
 
-    iteration = 0
-
-    def __init__(self, client, service_name, debug=False):
-        super(Switch, self).__init__(client, service_name, "switch", "Switch", debug)
-        self.pi = pigpio.pi()
-        self.set_switch()
+    def __init__(self, pin=17, debug=False):
+        super(Switch, self).__init__(debug=debug)
+        self.__pin = pin
+        self.__pi = pigpio.pi()
+        self.set_value()
 
     def on_mqtt_message(self, path, payload):
-        switch = payload.split(",")
-        self.switch = int(switch[0])
-        self.logger.debug("Got " + str(self.switch) + " " + str(path))
+        if payload.upper() in ["ON", "OFF"]:
+            self.__value = 255 if payload.upper() == "ON" else 0
+            self.__pattern = ""
+            self.set_value(update=True)
+        else:
+            value = payload.split(",")
+            self.__value = int(value[0])
 
-        if len(path) > 0:                                  # {service}/control/switch/{pattern}
-            if path[0] == self.PATTERN_FADEIN or path[0] == self.PATTERN_FADEOUT:
-                self.step = int(switch[1]) if len(switch) > 1 else self.STEP_DEFAULT
-                self.interval = float(switch[2]) / 1000.0 if len(switch) > 2 else self.INTERVAL_DEFAULT
-                self.count = int(switch[3]) if len(switch) > 3 else self.COUNT_DEFAULT
-                self.iteration = 0
-            self.pattern = path[0]
-            self.start()
-        else:                                              # {service}/control/switch
-            self.pattern = ""
-            self.set_switch(update=True)
+            if len(path) > 0:  # {service}/control/switch/{pattern}
+                if path[0] == self.PATTERN_FADEIN or path[0] == self.PATTERN_FADEOUT:
+                    self.__step = int(value[1]) if len(value) > 1 else self.STEP_DEFAULT
+                    self.__interval = float(value[2]) / 1000.0 if len(value) > 2 else self.INTERVAL_DEFAULT
+                    self.__count = int(value[3]) if len(value) > 3 else self.COUNT_DEFAULT
+                    self.__iteration = 0
+                self.__pattern = path[0]
+                self.start()
+            else:  # {service}/control/switch
+                self.__pattern = ""
+                self.set_value(update=True)
 
-    def set_switch(self, switch=None, update=False):
-        switch = switch if switch is not None else self.switch
+    def set_value(self, switch=None, update=False):
+        switch = switch if switch is not None else self.__value
         self.logger.debug("Setting to " + str(switch))
-        self.pi.set_PWM_dutycycle(self.PIN, switch)
+        self.__pi.set_PWM_dutycycle(self.__pin, switch)
 
-        if update:
-            self.client.publish(self.service_name + "/state/switch",
-                                str(switch), 1, True)
+        if update and self.module_mqtt is not None:
+            self.module_mqtt.publish("", str(switch), module=self)
 
     def looper(self):
-        if (self.pattern == self.PATTERN_FADEIN or self.pattern == self.PATTERN_FADEOUT) \
-                and (self.count is None or self.iteration < self.count):
-            percent_range = range(0, 100, self.step) if self.pattern == self.PATTERN_FADEIN \
-                else range(100, 0, -self.step)
+        if (self.__pattern == self.PATTERN_FADEIN or self.__pattern == self.PATTERN_FADEOUT) \
+                and (self.__count is None or self.__iteration < self.__count):
+            percent_range = range(0, 100, self.__step) if self.__pattern == self.PATTERN_FADEIN \
+                else range(100, 0, -self.__step)
 
             for percent in percent_range:
                 self.logger.debug("Percent: " + str(percent))
-                switch = int(float(self.switch) * float(percent) / 100.0)
-                self.set_switch(switch=switch, update=False)
-                time.sleep(self.interval)
-                if self.interrupted:
+                switch = int(float(self.__value) * float(percent) / 100.0)
+                self.set_value(switch=switch, update=False)
+                time.sleep(self.__interval)
+                if self.is_interrupted():
                     break
 
-            if self.pattern == self.PATTERN_FADEOUT:
-                self.switch = 0
-            self.set_switch(self.switch if self.pattern == self.PATTERN_FADEIN else 0, update=True)
-            self.iteration = self.iteration + 1
+            if self.__pattern == self.PATTERN_FADEOUT:
+                self.__value = 0
+            self.set_value(update=True)
+            self.__iteration = self.__iteration + 1
         else:
             time.sleep(0.5)
 
     def finalize(self):
         super(Switch, self).finalize()
-        self.pi.stop()
+        self.__pi.stop()

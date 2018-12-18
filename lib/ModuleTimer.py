@@ -3,26 +3,33 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-from threading import Timer
 import traceback
-from ModuleMQTT import ModuleMQTT
+from threading import Timer
+
+from lib.Module import Module
 
 
-class ModuleTimer(ModuleMQTT):
+class ModuleTimer(Module):
+    module_mqtt = None
+
     timer = None
     delay = 0
 
-    def __init__(self, client, service_name, module_name, debug=False):
-        super(ModuleTimer, self).__init__(client, service_name, module_name, debug)
+    def __init__(self, debug=False):
+        super(ModuleTimer, self).__init__(debug=debug)
 
-        self.publish("state", "OFF", 1, True)
+    def initialize(self):
+        super(ModuleTimer, self).initialize()
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("state", "OFF", module=self)
 
     def on_mqtt_message(self, path, payload):
         if len(path) > 0 and path[0] == "delay":
             self.delay = 0 if (payload == "OFF") else float(payload)
             if self.delay <= 0:
                 self.delay = 0
-            self.publish("delay", str(self.delay), 1, False)
+            if self.module_mqtt is not None:
+                self.module_mqtt.publish("delay", str(self.delay), module=self)
             self.logger.info("Measuring distance each " + str(self.delay) + "s")
             if self.delay > 0:
                 self.start_timer(self.delay)
@@ -48,7 +55,8 @@ class ModuleTimer(ModuleMQTT):
         if delay > 0 and self.timer is None:
             self.delay = delay
             self.on_start()
-            self.publish("state", "ON", 1, False)
+            if self.module_mqtt is not None:
+                self.module_mqtt.publish("state", "ON", module=self)
             self.timer = Timer(self.delay, self.__trigger__).start()
 
     def stop(self):
@@ -56,5 +64,6 @@ class ModuleTimer(ModuleMQTT):
         if self.timer is not None:
             self.timer.cancel()
             self.on_stop()
-            self.publish("state", "OFF", 1, False)
+            if self.module_mqtt is not None:
+                self.module_mqtt.publish("state", "OFF", module=self)
         self.timer = None

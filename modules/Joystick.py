@@ -4,66 +4,71 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import time
+
 import RPi.GPIO as GPIO
+
 from lib.ModuleLooper import ModuleLooper
 
 
 class Joystick(ModuleLooper):
-
     NONE = 0
 
-    state = NONE
+    module_buzzer = None
+    module_servo = None
+    module_wheels = None
 
-    control = "OFF"
+    __state = NONE
+    __control = "OFF"
+    __roll = 50
+    __pitch = 50
 
-    roll = 50
-    pitch = 50
+    def __init__(self, pin_center=7, pin_a=8, pin_b=9, pin_c=10, pin_d=11, debug=False):
+        super(Joystick, self).__init__(debu=debug)
+        self.__pin_center = pin_center
+        self.__pin_a = pin_a
+        self.__pin_b = pin_b
+        self.__pin_c = pin_c
+        self.__pin_d = pin_d
 
-    buzzer = None
-    servo = None
-    wheels = None
+        GPIO.setup(self.__pin_center, GPIO.IN, GPIO.PUD_UP)
+        GPIO.setup(self.__pin_a, GPIO.IN, GPIO.PUD_UP)
+        GPIO.setup(self.__pin_b, GPIO.IN, GPIO.PUD_UP)
+        GPIO.setup(self.__pin_c, GPIO.IN, GPIO.PUD_UP)
+        GPIO.setup(self.__pin_d, GPIO.IN, GPIO.PUD_UP)
 
-    def __init__(self, client, service_name, pin_center=7, pin_a=8, pin_b=9, pin_c=10, pin_d=11, debug=False):
-        super(Joystick, self).__init__(client, service_name, "joystick", "Joystick", debug)
-        self.pin_center = pin_center
-        self.pin_a = pin_a
-        self.pin_b = pin_b
-        self.pin_c = pin_c
-        self.pin_d = pin_d
+    def initialize(self):
+        super(Joystick, self).initialize()
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("button", "NONE", module=self)
+            self.module_mqtt.publish("center", "OFF", module=self)
+            self.module_mqtt.publish("up", "OFF", module=self)
+            self.module_mqtt.publish("right", "OFF", module=self)
+            self.module_mqtt.publish("down", "OFF", module=self)
+            self.module_mqtt.publish("left", "OFF", module=self)
+            self.module_mqtt.publish("control", "OFF", module=self)
 
-        GPIO.setup(self.pin_center, GPIO.IN, GPIO.PUD_UP)
-        GPIO.setup(self.pin_a, GPIO.IN, GPIO.PUD_UP)
-        GPIO.setup(self.pin_b, GPIO.IN, GPIO.PUD_UP)
-        GPIO.setup(self.pin_c, GPIO.IN, GPIO.PUD_UP)
-        GPIO.setup(self.pin_d, GPIO.IN, GPIO.PUD_UP)
-
-        self.publish("button", "NONE", 1, True)
-        self.publish("center", "OFF", 1, True)
-        self.publish("up", "OFF", 1, True)
-        self.publish("right", "OFF", 1, True)
-        self.publish("down", "OFF", 1, True)
-        self.publish("left", "OFF", 1, True)
-
-        self.publish("control", "OFF", 1, True)
+    def start(self, control="OFF"):
+        self.__control = control
+        super(Joystick, self).start()
 
     def on_start(self):
         super(Joystick, self).on_start()
-        if self.control != "OFF":
-            self.publish("control", self.control, 1, True)
+        if self.__control != "OFF" and self.module_mqtt is not None:
+            self.module_mqtt.publish("control", self.__control, module=self)
 
     def on_stop(self):
         super(Joystick, self).on_stop()
-        if self.control != "OFF":
-            self.publish("control", "OFF", 1, True)
-        self.control = "OFF"
+        if self.__control != "OFF" and self.module_mqtt is not None:
+            self.module_mqtt.publish("control", "OFF", module=self)
+        self.__control = "OFF"
 
     def on_mqtt_message(self, path, payload):
-        if len(path) > 0 and path[0] == "state":       # {service}/control/joystick/state
+        if len(path) > 0 and path[0] == "state":  # {service}/control/joystick/state
             if payload == "ON":
                 self.start("OFF")
             else:
                 self.stop()
-        elif len(path) > 0 and path[0] == "control":   # {service}/control/joystick/control
+        elif len(path) > 0 and path[0] == "control":  # {service}/control/joystick/control
             if payload == "MOVEMENT":
                 self.start("MOVEMENT")
             elif payload == "CAMERA":
@@ -72,85 +77,87 @@ class Joystick(ModuleLooper):
                 self.stop()
 
     def looper(self):
-        if GPIO.input(self.pin_center) == 0:
-            if self.state != self.pin_center:
+        if GPIO.input(self.__pin_center) == 0:
+            if self.__state != self.__pin_center:
                 self.logger.info("CENTER")
-                self.publish("button", "CENTER", 1, True)
-                self.publish("center", "OPEN", 1, True)
-                self.state = self.pin_center
-            if self.control == "CAMERA" and self.servo is not None:
-                if self.buzzer is not None:
-                    self.buzzer.on()
-            if self.control == "MOVEMENT" and self.wheels is not None:
-                self.wheels.halt()
-                if self.buzzer is not None:
-                    self.buzzer.on()
-        elif GPIO.input(self.pin_a) == 0:
-            if self.state != self.pin_a:
+                if self.module_mqtt is not None:
+                    self.module_mqtt.publish("button", "CENTER", module=self)
+                    self.module_mqtt.publish("center", "OPEN", module=self)
+                self.__state = self.__pin_center
+            if self.__control == "CAMERA" and self.module_buzzer is not None:
+                if self.module_buzzer is not None:
+                    self.module_buzzer.on()
+            if self.__control == "MOVEMENT" and self.module_wheels is not None:
+                self.module_wheels.halt()
+                if self.module_buzzer is not None:
+                    self.module_buzzer.on()
+        elif GPIO.input(self.__pin_a) == 0:
+            if self.__state != self.__pin_a:
                 self.logger.info("UP")
-                self.publish("button", "UP", 1, True)
-                self.publish("up", "OPEN", 1, True)
-                self.state = self.pin_a
-            if self.control == "CAMERA" and self.servo is not None:
-                self.pitch += 5
-                self.servo.set_position_percent(1, self.pitch)
-            elif self.control == "MOVEMENT" and self.wheels is not None:
-                self.wheels.move(50, 50, 1.0)
-        elif GPIO.input(self.pin_b) == 0:
-            if self.state != self.pin_b:
+                if self.module_mqtt is not None:
+                    self.module_mqtt.publish("button", "UP", module=self)
+                    self.module_mqtt.publish("up", "OPEN", module=self)
+                self.__state = self.__pin_a
+            if self.__control == "CAMERA" and self.module_servo is not None:
+                self.__pitch += 5
+                self.module_servo.set_position_percent(1, self.__pitch)
+            elif self.__control == "MOVEMENT" and self.module_wheels is not None:
+                self.module_wheels.move(50, 50, 1.0)
+        elif GPIO.input(self.__pin_b) == 0:
+            if self.__state != self.__pin_b:
                 self.logger.info("RIGHT")
-                self.publish("button", "RIGHT", 1, True)
-                self.publish("right", "OPEN", 1, True)
-                self.state = self.pin_b
-            if self.control == "CAMERA" and self.servo is not None:
-                self.roll += 5
-                self.servo.set_position_percent(0, self.roll)
-            elif self.control == "MOVEMENT" and self.wheels is not None:
-                self.wheels.move(-50, 50, 1.0)
-        elif GPIO.input(self.pin_c) == 0:
-            if self.state != self.pin_c:
+                if self.module_mqtt is not None:
+                    self.module_mqtt.publish("button", "RIGHT", module=self)
+                    self.module_mqtt.publish("right", "OPEN", module=self)
+                self.__state = self.__pin_b
+            if self.__control == "CAMERA" and self.module_servo is not None:
+                self.__roll += 5
+                self.module_servo.set_position_percent(0, self.__roll)
+            elif self.__control == "MOVEMENT" and self.module_wheels is not None:
+                self.module_wheels.move(-50, 50, 1.0)
+        elif GPIO.input(self.__pin_c) == 0:
+            if self.__state != self.__pin_c:
                 self.logger.info("LEFT")
-                self.publish("button", "LEFT", 1, True)
-                self.publish("left", "OPEN", 1, True)
-                self.state = self.pin_c
-            if self.control == "CAMERA" and self.servo is not None:
-                self.roll -= 5
-                self.servo.set_position_percent(0, self.roll)
-            elif self.control == "MOVEMENT" and self.wheels is not None:
-                self.wheels.move(50, -50, 1.0)
-        elif GPIO.input(self.pin_d) == 0:
-            if self.state != self.pin_d:
+                if self.module_mqtt is not None:
+                    self.module_mqtt.publish("button", "LEFT", module=self)
+                    self.module_mqtt.publish("left", "OPEN", module=self)
+                self.__state = self.__pin_c
+            if self.__control == "CAMERA" and self.module_servo is not None:
+                self.__roll -= 5
+                self.module_servo.set_position_percent(0, self.__roll)
+            elif self.__control == "MOVEMENT" and self.module_wheels is not None:
+                self.module_wheels.move(50, -50, 1.0)
+        elif GPIO.input(self.__pin_d) == 0:
+            if self.__state != self.__pin_d:
                 self.logger.info("DOWN")
-                self.publish("button", "DOWN", 1, True)
-                self.publish("down", "OPEN", 1, True)
-                self.state = self.pin_d
-            if self.control == "CAMERA" and self.servo is not None:
-                self.pitch -= 5
-                self.servo.set_position_percent(1, self.pitch)
-            elif self.control == "MOVEMENT" and self.wheels is not None:
-                self.wheels.move(-50, -50, 1.0)
+                if self.module_mqtt is not None:
+                    self.module_mqtt.publish("button", "DOWN", module=self)
+                    self.module_mqtt.publish("down", "OPEN", module=self)
+                self.__state = self.__pin_d
+            if self.__control == "CAMERA" and self.module_servo is not None:
+                self.__pitch -= 5
+                self.module_servo.set_position_percent(1, self.__pitch)
+            elif self.__control == "MOVEMENT" and self.module_wheels is not None:
+                self.module_wheels.move(-50, -50, 1.0)
         else:
-            if self.state != self.NONE:
+            if self.__state != self.NONE:
                 self.logger.info("NONE")
-                self.publish("button", "NONE", 1, True)
-                if self.state == self.pin_center:
-                    self.publish("center", "CLOSED", 1, True)
-                elif self.state == self.pin_a:
-                    self.publish("up", "CLOSED", 1, True)
-                elif self.state == self.pin_b:
-                    self.publish("right", "CLOSED", 1, True)
-                elif self.state == self.pin_c:
-                    self.publish("down", "CLOSED", 1, True)
-                elif self.state == self.pin_d:
-                    self.publish("left", "CLOSED", 1, True)
-                self.state = self.NONE
-                if self.buzzer is not None:
-                    self.buzzer.off()
-                if self.wheels is not None:
-                    self.wheels.halt()
+                if self.module_mqtt is not None:
+                    self.module_mqtt.publish("button", "NONE", module=self)
+                    if self.__state == self.__pin_center:
+                        self.module_mqtt.publish("center", "CLOSED", module=self)
+                    elif self.__state == self.__pin_a:
+                        self.module_mqtt.publish("up", "CLOSED", module=self)
+                    elif self.__state == self.__pin_b:
+                        self.module_mqtt.publish("right", "CLOSED", module=self)
+                    elif self.__state == self.__pin_c:
+                        self.module_mqtt.publish("down", "CLOSED", module=self)
+                    elif self.__state == self.__pin_d:
+                        self.module_mqtt.publish("left", "CLOSED", module=self)
+                self.__state = self.NONE
+                if self.module_buzzer is not None:
+                    self.module_buzzer.off()
+                if self.module_wheels is not None:
+                    self.module_wheels.halt()
 
         time.sleep(0.2)
-
-    def start(self, control="OFF"):
-        self.control = control
-        super(Joystick, self).start()

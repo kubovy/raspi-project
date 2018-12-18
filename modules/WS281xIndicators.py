@@ -40,7 +40,6 @@ def to_configs(data):
 
 class Config(object):
     def __init__(self, pattern="light", color=0, wait=50, minimum=0, maximum=100):
-
         self.pattern = pattern
         self.color = color
         self.wait = wait
@@ -52,6 +51,8 @@ class Config(object):
 
 
 class WS281xIndicators(ModuleLooper):
+    """WS2811/WS2812 indicator module"""
+
     # LED strip configuration:
     LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
     # LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
@@ -64,24 +65,20 @@ class WS281xIndicators(ModuleLooper):
 
     LOOP_WAIT = 10  # ms
 
-    interrupted = False
-    thread = None
+    module_serial_reader = None
 
-    serial_reader = None
-    iteration = 0
+    __iteration = 0
 
-    def __init__(self, client, service_name, led_count=50, debug=False):
-        super(WS281xIndicators, self).__init__(client, service_name, "ws281x-indicators", "WS281x I/O", debug)
+    def __init__(self, led_count=50, debug=False):
+        super(WS281xIndicators, self).__init__(debug=debug)
         # Create NeoPixel object with appropriate configuration.
-        self.led_count = led_count
-        self.data = [None for _ in range(self.led_count)]
-        self.strip = Adafruit_NeoPixel(self.led_count, self.LED_PIN, self.LED_FREQ_HZ, self.LED_DMA, self.LED_INVERT,
-                                       self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
+        self.__led_count = led_count
+        self.__data = [[] for _ in range(self.__led_count)]
+        self.__strip = Adafruit_NeoPixel(led_count, self.LED_PIN, self.LED_FREQ_HZ, self.LED_DMA, self.LED_INVERT,
+                                         self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
         # Intialize the library (must be called once before other functions).
-        self.strip.begin()
-        for led in range(self.led_count):
-            self.strip.setPixelColor(led, ColorGRB(0, 0, 0))
-            self.strip.show()
+        self.__strip.begin()
+        self.reset()
 
     def set(self, index, payload):
         self.logger.debug("Setting " + str(index) + " to " + str(payload) + " " + str(type(payload)))
@@ -102,23 +99,17 @@ class WS281xIndicators(ModuleLooper):
             data = None
 
         if data is not None:
-            self.data[index] = to_configs(data)
-
-    def on_start(self):
-        super(WS281xIndicators, self).on_start()
-        if self.serial_reader is not None:
-            self.serial_reader.register(self)
-
-    def on_stop(self):
-        super(WS281xIndicators, self).on_stop()
-        if self.serial_reader is not None:
-            self.serial_reader.unregister(self)
+            self.__data[int(index)] = to_configs(data)
 
     def finalize(self):
         super(WS281xIndicators, self).finalize()
-        for led, configs in enumerate(self.data):
-            self.strip.setPixelColor(led, 0)
-        self.strip.show()
+        self.reset()
+
+    def reset(self):
+        self.__data = [None for _ in range(self.__led_count)]
+        for led in range(self.__led_count):
+            self.__strip.setPixelColor(led, 0)
+        self.__strip.show()
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 1:
@@ -136,7 +127,7 @@ class WS281xIndicators(ModuleLooper):
             for led in all_data.keys():
                 try:
                     self.logger.debug(str(led) + ": " + str(all_data[led]))
-                    self.data[int(led)] = to_configs([all_data[led]])
+                    self.__data[int(led)] = to_configs([all_data[led]])
                 except ValueError:
                     self.logger.error('Oops!  That was no valid JSON.  Try again...')
                     traceback.print_exc()
@@ -146,45 +137,45 @@ class WS281xIndicators(ModuleLooper):
 
     def on_serial_message(self, message):
         try:
-            self.data = to_configs(json.loads(message))
+            self.__data = to_configs(json.loads(message))
         except ValueError:
             self.logger.error('Oops!  That was no valid JSON.  Try again...')
             traceback.print_exc()
 
     def looper(self):
-        for led, configs in enumerate(self.data):
-            if configs is None or configs == []:
-                self.strip.setPixelColor(led, 0)
+        for led, configs in enumerate(self.__data):
+            if configs is None or len(configs) == 0:
+                self.__strip.setPixelColor(led, 0)
             else:
                 config = configs[0]  # TODO JK: also multiple configs should be possible
-                if (self.iteration * self.LOOP_WAIT) % config.wait == 0:
+                if (self.__iteration * self.LOOP_WAIT) % config.wait == 0:
                     if config.pattern == 'fade':
-                        step = (self.iteration * self.LOOP_WAIT / config.wait) % (config.max - config.min)
+                        step = (self.__iteration * self.LOOP_WAIT / config.wait) % (config.max - config.min)
                         percent = step + config.min if ((step + config.min) < config.max) else \
                             config.max - (step + config.min - config.max)
                         factor = float(percent) / 100.0
                         color = ColorGRB(int(float((config.color & (255 << 8)) >> 8) * factor),
-                                      int(float((config.color & (255 << 16)) >> 16) * factor),
-                                      int(float((config.color & 255)) * factor))
-                        self.strip.setPixelColor(led, color)
+                                         int(float((config.color & (255 << 16)) >> 16) * factor),
+                                         int(float((config.color & 255)) * factor))
+                        self.__strip.setPixelColor(led, color)
                     elif config.pattern == 'fadeToggle':
-                        step = (self.iteration * self.LOOP_WAIT / config.wait) % ((config.max - config.min) * 2)
+                        step = (self.__iteration * self.LOOP_WAIT / config.wait) % ((config.max - config.min) * 2)
                         percent = step + config.min if ((step + config.min) < config.max) else \
                             config.max - (step + config.min - config.max)
                         factor = float(percent) / 100.0
                         color = ColorGRB(int(float((config.color & (255 << 8)) >> 8) * factor),
-                                      int(float((config.color & (255 << 16)) >> 16) * factor),
-                                      int(float((config.color & 255)) * factor))
-                        self.strip.setPixelColor(led, color)
+                                         int(float((config.color & (255 << 16)) >> 16) * factor),
+                                         int(float((config.color & 255)) * factor))
+                        self.__strip.setPixelColor(led, color)
 
                     elif config.pattern == 'blink':
-                        on = math.floor(self.iteration * self.LOOP_WAIT / config.wait) % 2 == 0
-                        self.strip.setPixelColor(led, config.color if on else 0)
+                        on = math.floor(self.__iteration * self.LOOP_WAIT / config.wait) % 2 == 0
+                        self.__strip.setPixelColor(led, config.color if on else 0)
                     else:
-                        self.strip.setPixelColor(led, config.color)
+                        self.__strip.setPixelColor(led, config.color)
 
-        self.strip.show()
+        self.__strip.show()
 
         time.sleep(self.LOOP_WAIT / 1000.0)
-        self.iteration = self.iteration + 1
+        self.__iteration = self.__iteration + 1
         # if iteration >= 6000: iteration = 0

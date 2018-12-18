@@ -4,26 +4,31 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import threading
+
+from lib.Module import Module
 from lib.PCA9685 import PCA9685
-from lib.ModuleMQTT import ModuleMQTT
 
 
-class Servo(ModuleMQTT):
+class Servo(Module):
+    """Servo module"""
 
-    def __init__(self, client, service_name, servo_mins=None, servo_mids=None, servo_maxs=None, degree_span=180.0,
-                 debug=False):
-        super(Servo, self).__init__(client, service_name, "servo", debug)
+    module_mqtt = None
 
-        self.servo_mins = [1000] if servo_mins is None else servo_mins
-        self.servo_mids = [1500] if servo_mids is None else servo_mids
-        self.servo_maxs = [2000] if servo_maxs is None else servo_maxs
-        self.servo_points_per_degree = float(servo_maxs[0] - servo_mins[0]) / degree_span
+    def __init__(self, servo_mins=None, servo_mids=None, servo_maxs=None, degree_span=180.0, debug=False):
+        super(Servo, self).__init__(debug=debug)
 
-        self.pwm = PCA9685(0x40, debug)
-        self.pwm.setPWMFreq(50)
+        self.__servo_mins = [1000] if servo_mins is None else servo_mins
+        self.__servo_mids = [1500] if servo_mids is None else servo_mids
+        self.__servo_maxs = [2000] if servo_maxs is None else servo_maxs
+        self.__servo_points_per_degree = float(servo_maxs[0] - servo_mins[0]) / degree_span
 
-        for servo in range(0, len(self.servo_mids)):
-            self.set_position(servo, servo_mids[servo])
+        self.__pwm = PCA9685(0x40, debug)
+        self.__pwm.setPWMFreq(50)
+
+    def initialize(self):
+        super(Servo, self).initialize()
+        for servo in range(0, len(self.__servo_mids)):
+            self.set_position(servo, self.__servo_mids[servo])
 
     def on_mqtt_message(self, path, payload):
         if len(path) > 0:
@@ -34,17 +39,17 @@ class Servo(ModuleMQTT):
 
             if len(path) > 1 and path[1] == "deg" or path[1] == "degrees":  # {service}/servo/camera/{servo}/deg
                 self.set_position_degrees(servo, -float(payload))
-            elif len(path) > 1 and path[1] == "percent":                    # {service}/servo/camera/{servo}/percent
+            elif len(path) > 1 and path[1] == "percent":  # {service}/servo/camera/{servo}/percent
                 self.set_position_percent(servo, int(payload))
-            else:                                                           # {service}/servo/camera/{servo}
+            else:  # {service}/servo/camera/{servo}
                 self.set_position(servo, int(payload))
 
     def servo_count(self):
-        min(len(self.servo_mins), len(self.servo_mids), len(self.servo_maxs))
+        min(len(self.__servo_mins), len(self.__servo_mids), len(self.__servo_maxs))
 
     def set_position(self, servo, position):
-        position_min = self.servo_mins[servo]
-        position_max = self.servo_maxs[servo]
+        position_min = self.__servo_mins[servo]
+        position_max = self.__servo_maxs[servo]
         original = position
         if position > position_max:
             position = position_max
@@ -52,17 +57,19 @@ class Servo(ModuleMQTT):
             position = position_min
         self.logger.debug(str(original) + " -> " + str(position))
 
-        self.publish(str(servo) + "/raw", position, 0, True)
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish(str(servo) + "/raw", position, module=self)
 
         percent = 100 - int(float(position - position_min) * 100.0 / float(position_max - position_min))
-        self.publish(str(servo) + "/percent", percent, 1, True)
-        
-        self.pwm.setServoPulse(servo, position)
-        threading.Timer(0.5, self.stop).start()
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish(str(servo) + "/percent", percent, module=self)
+
+        self.__pwm.setServoPulse(servo, position)
+        threading.Timer(0.5, self.stop_servos).start()
 
     def set_position_percent(self, servo, percent):
-        position_min = self.servo_mins[servo]
-        position_max = self.servo_maxs[servo]
+        position_min = self.__servo_mins[servo]
+        position_max = self.__servo_maxs[servo]
         if percent > 100:
             percent = 100
         if percent < 0:
@@ -72,12 +79,12 @@ class Servo(ModuleMQTT):
         self.set_position(servo, position)
 
     def set_position_degrees(self, servo, degrees):
-        position_mid = self.servo_mids[servo]
-        position = int(degrees * self.servo_points_per_degree + position_mid)
+        position_mid = self.__servo_mids[servo]
+        position = int(degrees * self.__servo_points_per_degree + position_mid)
         self.logger.debug(str(degrees) + "deg -> " + str(position))
         self.set_position(servo, position)
 
-    def stop(self):
+    def stop_servos(self):
         self.logger.debug("Stopping")
-        self.pwm.stop(0)
-        self.pwm.stop(1)
+        self.__pwm.stop(0)
+        self.__pwm.stop(1)

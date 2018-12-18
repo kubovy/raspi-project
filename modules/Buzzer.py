@@ -3,35 +3,46 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-import RPi.GPIO as GPIO
 from threading import Timer
-from lib.ModuleMQTT import ModuleMQTT
+
+import RPi.GPIO as GPIO
+
+from lib.Module import Module
 
 
-class Buzzer(ModuleMQTT):
-    def __init__(self, client, service_name, pin=4, debug=False):
-        super(Buzzer, self).__init__(client, service_name, "buzzer", debug)
-        self.pin = pin
+class Buzzer(Module):
+    """Buzzer module"""
 
-        GPIO.setup(self.pin, GPIO.OUT)
+    module_mqtt = None
+
+    def __init__(self, pin=4, debug=False):
+        super(Buzzer, self).__init__(debug=debug)
+        self.__pin = pin
+
+        GPIO.setup(self.__pin, GPIO.OUT)
 
         self.off()
 
-    def on_mqtt_message(self, path, payload):
-        if len(path) == 0:               # {service}/control/{module}
-            if payload == "ON":
-                self.on()
-            else:
-                self.off()
-
     def beep(self, delay):
+        """Beeps for `delay` seconds"""
         self.on()
         Timer(delay, self.off).start()
 
     def on(self):
-        GPIO.output(self.pin, GPIO.HIGH)
-        self.publish("", "ON", 1, True)
+        """Turns beeper on"""
+        GPIO.output(self.__pin, GPIO.HIGH)
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("", "ON", module=self)
 
     def off(self):
-        GPIO.output(self.pin, GPIO.LOW)
-        self.publish("", "OFF", 1, True)
+        """Turns beeper off"""
+        GPIO.output(self.__pin, GPIO.LOW)
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("", "OFF", module=self)
+
+    def on_mqtt_message(self, path, payload):
+        if len(path) == 0:  # {service}/control/{module}
+            if payload == "ON":
+                self.on()
+            else:
+                self.off()

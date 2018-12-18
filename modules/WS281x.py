@@ -6,9 +6,10 @@
 # various animations on a strip of NeoPixels.
 import json
 
+from neopixel import *
+
 from lib.ColorGRB import ColorGRB
 from lib.ModuleLooper import *
-from neopixel import *
 
 
 def to_color(data):
@@ -57,7 +58,6 @@ def to_configs(data):
 class Config(object):
     def __init__(self, pattern="light", color1=0, color2=0, color3=0, color4=0, color5=0, color6=0, color7=0, color8=0,
                  color9=0, color10=0, color11=0, color12=0, wait=50, width=3, fading=0, minimum=0, maximum=100):
-
         self.pattern = pattern
         self.color1 = color1
         self.color2 = color2
@@ -98,6 +98,8 @@ def wheel(pos):
 
 
 class WS281x(ModuleLooper):
+    """WS2811/WS2812 module"""
+
     # LED strip configuration:
     LED_PIN = 18  # GPIO pin connected to the pixels (18 uses PWM!).
     # LED_PIN        = 10      # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
@@ -108,7 +110,7 @@ class WS281x(ModuleLooper):
     LED_CHANNEL = 0  # set to '1' for GPIOs 13, 19, 41, 45 or 53
     LED_STRIP = ws.WS2811_STRIP_GRB  # Strip type and colour ordering
 
-    data = to_configs(json.loads(json.dumps([{
+    __data = to_configs(json.loads(json.dumps([{
         'pattern': 'fade',
         'color1': {'red': 16, 'green': 16, 'blue': 16},
         'color2': {'red': 16, 'green': 16, 'blue': 16},
@@ -124,31 +126,27 @@ class WS281x(ModuleLooper):
         'color12': {'red': 16, 'green': 16, 'blue': 16},
         'wait': 10, 'width': 3, 'fading': 0, 'min': 50, 'max': 80}])))
 
-    interrupted = False
-    thread = None
+    module_serial_reader = None
+    module_bluetooth = None
 
-    serial_reader = None
-    bluetooth_server = None
-
-    def __init__(self, client, service_name, startup_file=None,
-                 led_count=50, row_led_count=24, row_count=2, reverse=False, debug=False):
-        super(WS281x, self).__init__(client, service_name, "ws281x", "WS281x", debug)
+    def __init__(self, startup_file=None, led_count=50, row_led_count=24, row_count=2, reverse=False, debug=False):
+        super(WS281x, self).__init__(debug=debug)
         # Create NeoPixel object with appropriate configuration.
-        self.startup_file = startup_file
-        self.led_count = led_count
-        self.row_led_count = row_led_count
-        self.row_count = row_count
-        self.rest_count = int(self.led_count - (self.row_led_count * self.row_count))
-        self.reverse = reverse
-        self.strip = Adafruit_NeoPixel(self.led_count, self.LED_PIN, self.LED_FREQ_HZ, self.LED_DMA, self.LED_INVERT,
-                                       self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
+        self.__startup_file = startup_file
+        self.__led_count = led_count
+        self.__row_led_count = row_led_count
+        self.__row_count = row_count
+        self.__rest_count = int(self.__led_count - (self.__row_led_count * self.__row_count))
+        self.__reverse = reverse
+        self.__strip = Adafruit_NeoPixel(self.__led_count, self.LED_PIN, self.LED_FREQ_HZ, self.LED_DMA,
+                                         self.LED_INVERT, self.LED_BRIGHTNESS, self.LED_CHANNEL, self.LED_STRIP)
         # Intialize the library (must be called once before other functions).
-        self.strip.begin()
+        self.__strip.begin()
 
     def __set_pixel_color(self, num, color):
-        num_safe = self.led_count - num - 1 if self.reverse else num
+        num_safe = self.__led_count - num - 1 if self.__reverse else num
         # self.logger.debug("Pixel: " + str(num_safe) + " color: " + dump_color(color))
-        self.strip.setPixelColor(num_safe, color)
+        self.__strip.setPixelColor(num_safe, color)
 
     def __color_id__(self, config, position):
         color_count = 0
@@ -157,11 +155,11 @@ class WS281x(ModuleLooper):
             color_count = color_count + 1
 
         if position.startswith('top'):
-            num = int(position.split("-")[1]) % self.rest_count
-            color_num = color_count - self.rest_count + num
+            num = int(position.split("-")[1]) % self.__rest_count
+            color_num = color_count - self.__rest_count + num
         else:
             num = int(position)
-            color_num = num % (color_count - self.rest_count)
+            color_num = num % (color_count - self.__rest_count)
 
             # group = num - (num % 2)
             # group_color_num = group * 2
@@ -179,102 +177,102 @@ class WS281x(ModuleLooper):
     # Define functions which animate LEDs in various ways.
     def color_wipe(self, color, wait_ms=50):
         """Wipe color across display a pixel at a time."""
-        for i in range(self.led_count):
+        for i in range(self.__led_count):
             self.__set_pixel_color(i, color)
-            self.strip.show()
+            self.__strip.show()
             time.sleep(wait_ms / 1000.0)
 
     def theater(self, config):
         """Movie theater light style chaser animation."""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
         for j in range(config.fading):  # iterations
             for q in range(3):
-                for i in range(0, self.row_led_count, 3):
-                    for row in range(self.row_count):
-                        self.__set_pixel_color(i + q + (row * self.row_led_count), self.__color__(config, str(row)))
-                    self.strip.show()
+                for i in range(0, self.__row_led_count, 3):
+                    for row in range(self.__row_count):
+                        self.__set_pixel_color(i + q + (row * self.__row_led_count), self.__color__(config, str(row)))
+                    self.__strip.show()
                 time.sleep(config.wait / 1000.0)
-                for i in range(0, self.row_led_count, 3):
-                    for row in range(self.row_count):
-                        self.__set_pixel_color(i + q + (row * self.row_led_count), 0)
+                for i in range(0, self.__row_led_count, 3):
+                    for row in range(self.__row_count):
+                        self.__set_pixel_color(i + q + (row * self.__row_led_count), 0)
 
     def rainbow(self, config):
         """Draw rainbow that fades across all pixels at once."""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
         for j in range(256 * config.fading):  # iterations
-            for i in range(self.row_count * self.row_led_count):
+            for i in range(self.__row_count * self.__row_led_count):
                 self.__set_pixel_color(i, wheel((i + j) & 255))
-            self.strip.show()
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def rainbow_cycle(self, config):
-        """Draw rainbow that uniformly distributes itself across all pixels."""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        """Draw rainbow that uniformly distributes itself.__across all pixels."""
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
         for j in range(256 * config.fading):  # iterations
-            for i in range(self.row_count * self.row_led_count):
-                self.__set_pixel_color(i, wheel((int(i * 256 / self.led_count) + j) & 255))
-            self.strip.show()
+            for i in range(self.__row_count * self.__row_led_count):
+                self.__set_pixel_color(i, wheel((int(i * 256 / self.__led_count) + j) & 255))
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def theater_chase_rainbow(self, config):
         """Rainbow movie theater light style chaser animation."""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
         for j in range(256):
             for q in range(3):
-                for i in range(0, self.row_count * self.row_led_count, 3):
+                for i in range(0, self.__row_count * self.__row_led_count, 3):
                     self.__set_pixel_color(i + q, wheel((i + j) % 255))
-                self.strip.show()
+                self.__strip.show()
                 time.sleep(config.wait / 1000.0)
-                for i in range(0, self.row_count * self.row_led_count, 3):
+                for i in range(0, self.__row_count * self.__row_led_count, 3):
                     self.__set_pixel_color(i + q, 0)
 
     # Mine
 
     def wipe(self, config):
         """Wipe color across display a pixel at a time."""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-        for i in range(self.row_led_count):
-            for row in range(self.row_count):
-                self.__set_pixel_color(i + (row * self.row_led_count), self.__color__(config, str(row)))
-            self.strip.show()
+        for i in range(self.__row_led_count):
+            for row in range(self.__row_count):
+                self.__set_pixel_color(i + (row * self.__row_led_count), self.__color__(config, str(row)))
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
         if config.fading > 0:
             time.sleep(config.fading / 1000.0)
             copy = config.clone()
-            for row in range(self.row_count):
+            for row in range(self.__row_count):
                 self.__color__(copy, str(row), 0)
             copy.fading = 0
             self.wipe(copy)
 
     def light(self, config):
         """Light"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
-        for row in range(self.row_count):
-            for i in range(self.row_led_count):
-                self.__set_pixel_color(i + (row * self.row_led_count), self.__color__(config, str(row)))
-        self.strip.show()
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for row in range(self.__row_count):
+            for i in range(self.__row_led_count):
+                self.__set_pixel_color(i + (row * self.__row_led_count), self.__color__(config, str(row)))
+        self.__strip.show()
         time.sleep(config.wait / 1000.0)
 
     def rotation(self, config):
         """Rotation"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-        for i in range(self.row_led_count):
-            for j in range(self.row_led_count * self.row_count):
+        for i in range(self.__row_led_count):
+            for j in range(self.__row_led_count * self.__row_count):
                 self.__set_pixel_color(j, 0)
-            for row in range(self.row_count):
+            for row in range(self.__row_count):
                 # white = (color1 & (255 << 24)) >> 24
                 red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
                 green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
@@ -284,25 +282,25 @@ class WS281x(ModuleLooper):
                     percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
                     factor = percent / 100.0
                     color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
-                    j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
-                    self.__set_pixel_color(j + (row * self.row_led_count), color)
+                    j = i + w if (i + w < self.__row_led_count) else (i + w) - self.__row_led_count
+                    self.__set_pixel_color(j + (row * self.__row_led_count), color)
 
-            self.strip.show()
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def spin(self, config):
         """Spin"""
         use = config.clone()
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(use, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(use, "top-" + str(i)))
         for w in range(5):
-            use.width = self.row_led_count
-            use.fading = 100 / self.row_led_count
+            use.width = self.__row_led_count
+            use.fading = 100 / self.__row_led_count
             use.wait = 50 - (w * 10)
             self.rotation(use)
         for w in range(3):
-            use.width = self.row_led_count / 2
-            use.fading = 100 / (self.row_led_count / 2)
+            use.width = self.__row_led_count / 2
+            use.fading = 100 / (self.__row_led_count / 2)
             use.wait = 30 - (w * 10)
             self.lighthouse(use)
             self.lighthouse(use)
@@ -312,14 +310,14 @@ class WS281x(ModuleLooper):
 
     def chaise(self, config):
         """Chaice"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-        for i in range(self.row_led_count):
-            for j in range(self.row_led_count * self.row_count):
+        for i in range(self.__row_led_count):
+            for j in range(self.__row_led_count * self.__row_count):
                 self.__set_pixel_color(j, 0)
             for w in range(config.width):
-                for row in range(self.row_count):
+                for row in range(self.__row_count):
                     # white = (color1 & (255 << 24)) >> 24
                     red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
                     green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
@@ -329,83 +327,85 @@ class WS281x(ModuleLooper):
                     factor = percent / 100.0
 
                     color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
-                    if row < self.row_count / 2:
-                        j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
+                    if row < self.__row_count / 2:
+                        j = i + w if (i + w < self.__row_led_count) else (i + w) - self.__row_led_count
                     else:
-                        j = self.row_led_count - (i + w) - 1 if (self.row_led_count > i + w) \
-                            else (self.row_led_count - (i + w) - 1) + self.row_led_count
-                    self.__set_pixel_color(j + (row * self.row_led_count), color)
+                        j = self.__row_led_count - (i + w) - 1 if (self.__row_led_count > i + w) \
+                            else (self.__row_led_count - (i + w) - 1) + self.__row_led_count
+                    self.__set_pixel_color(j + (row * self.__row_led_count), color)
 
-            self.strip.show()
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def lighthouse(self, config):
         """Lighthouse"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-        for i in range(self.row_led_count):
-            for j in range(self.row_led_count * self.row_count):
+        for i in range(self.__row_led_count):
+            for j in range(self.__row_led_count * self.__row_count):
                 self.__set_pixel_color(j, 0)
-            for row in range(self.row_count):
+            for row in range(self.__row_count):
                 # white1 = (self.__color__(config, str(row * 2)) & (255 << 24)) >> 24
                 red1 = (self.__color__(config, str(row)) & (255 << 8)) >> 8
                 green1 = (self.__color__(config, str(row)) & (255 << 16)) >> 16
                 blue1 = (self.__color__(config, str(row)) & 255)
                 # white2 = (color2 & (255 << 24)) >> 24
-                red2 = (self.__color__(config, str(row + self.row_count)) & (255 << 8)) >> 8
-                green2 = (self.__color__(config, str(row + self.row_count)) & (255 << 16)) >> 16
-                blue2 = (self.__color__(config, str(row + self.row_count)) & 255)
+                red2 = (self.__color__(config, str(row + self.__row_count)) & (255 << 8)) >> 8
+                green2 = (self.__color__(config, str(row + self.__row_count)) & (255 << 16)) >> 16
+                blue2 = (self.__color__(config, str(row + self.__row_count)) & 255)
 
                 for w in range(config.width):
                     percent = max(100.0 - float(config.width - w - 1) * float(config.fading), 0.0)
                     factor = percent / 100.0
-                    color1 = ColorGRB(int(float(red1) * factor), int(float(green1) * factor), int(float(blue1) * factor))
-                    color2 = ColorGRB(int(float(red2) * factor), int(float(green2) * factor), int(float(blue2) * factor))
+                    color1 = ColorGRB(int(float(red1) * factor), int(float(green1) * factor),
+                                      int(float(blue1) * factor))
+                    color2 = ColorGRB(int(float(red2) * factor), int(float(green2) * factor),
+                                      int(float(blue2) * factor))
 
-                    half = self.row_led_count / 2
-                    j = i + w if (i + w < self.row_led_count) else (i + w) - self.row_led_count
-                    q = j + half if (j + half < self.row_led_count) else (j + half) - self.row_led_count
+                    half = self.__row_led_count / 2
+                    j = i + w if (i + w < self.__row_led_count) else (i + w) - self.__row_led_count
+                    q = j + half if (j + half < self.__row_led_count) else (j + half) - self.__row_led_count
 
-                    self.__set_pixel_color(j + (row * self.row_led_count), color1)
-                    self.__set_pixel_color(q + (row * self.row_led_count), color2)
+                    self.__set_pixel_color(j + (row * self.__row_led_count), color1)
+                    self.__set_pixel_color(q + (row * self.__row_led_count), color2)
 
-            self.strip.show()
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def fade(self, config):
         """Fade"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
         for step in range((config.max - config.min) * 2):
             percent = step + config.min if ((step + config.min) < config.max) else \
                 config.max - (step + config.min - config.max)
             factor = float(percent) / 100.0
 
-            for row in range(self.row_count):
+            for row in range(self.__row_count):
                 # white1 = (self.__color__(config, str(row)) & (255 << 24)) >> 24
                 red = (self.__color__(config, str(row)) & (255 << 8)) >> 8
                 green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
                 blue = (self.__color__(config, str(row)) & 255)
                 color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
-                for i in range(self.row_led_count):
-                    self.__set_pixel_color(i + (row * self.row_led_count), color)
+                for i in range(self.__row_led_count):
+                    self.__set_pixel_color(i + (row * self.__row_led_count), color)
 
-            self.strip.show()
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def fade_toggle(self, config):
         """Fade Toggle"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
         for step in range((config.max - config.min) * 2):
             percent = step + config.min if ((step + config.min) < config.max) else \
                 config.max - (step + config.min - config.max)
 
-            for row in range(self.row_count):
-                if row < self.row_count / 2:
+            for row in range(self.__row_count):
+                if row < self.__row_count / 2:
                     factor = float(percent) / 100.0
                 else:
                     factor = float(config.max - percent + config.min) / 100.0
@@ -414,53 +414,39 @@ class WS281x(ModuleLooper):
                 green = (self.__color__(config, str(row)) & (255 << 16)) >> 16
                 blue = (self.__color__(config, str(row)) & 255)
                 color = ColorGRB(int(float(red) * factor), int(float(green) * factor), int(float(blue) * factor))
-                for i in range(self.row_led_count):
-                    self.__set_pixel_color(i + (row * self.row_led_count), color)
+                for i in range(self.__row_led_count):
+                    self.__set_pixel_color(i + (row * self.__row_led_count), color)
 
-            self.strip.show()
+            self.__strip.show()
             time.sleep(config.wait / 1000.0)
 
     def blink(self, config):
         """Blink"""
-        for i in range(self.rest_count):
-            self.__set_pixel_color(self.led_count - i - 1, self.__color__(config, "top-" + str(i)))
+        for i in range(self.__rest_count):
+            self.__set_pixel_color(self.__led_count - i - 1, self.__color__(config, "top-" + str(i)))
 
-        for row in range(self.row_count):
-            for i in range(self.row_led_count):
-                self.__set_pixel_color(i + (row * self.row_led_count), self.__color__(config, str(row)))
-        self.strip.show()
+        for row in range(self.__row_count):
+            for i in range(self.__row_led_count):
+                self.__set_pixel_color(i + (row * self.__row_led_count), self.__color__(config, str(row)))
+        self.__strip.show()
         time.sleep(config.wait / 1000.0)
 
-        for row in range(self.row_count):
-            for i in range(self.row_led_count):
-                self.__set_pixel_color(i + (row * self.row_led_count), 0)
-        self.strip.show()
+        for row in range(self.__row_count):
+            for i in range(self.__row_led_count):
+                self.__set_pixel_color(i + (row * self.__row_led_count), 0)
+        self.__strip.show()
         time.sleep(config.wait / 1000.0)
-
-    def on_start(self):
-        super(WS281x, self).on_start()
-        if self.bluetooth_server is not None:
-            self.bluetooth_server.register(self)
-        if self.serial_reader is not None:
-            self.serial_reader.register(self)
-
-    def on_stop(self):
-        super(WS281x, self).on_stop()
-        if self.bluetooth_server is not None:
-            self.bluetooth_server.unregister(self)
-        if self.serial_reader is not None:
-            self.serial_reader.unregister(self)
 
     def finalize(self):
         super(WS281x, self).finalize()
-        for led in range(self.led_count):
-            self.strip.setPixelColor(led, 0)
-        self.strip.show()
+        for led in range(self.__led_count):
+            self.__strip.setPixelColor(led, 0)
+        self.__strip.show()
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 0:
             if payload == "ON":
-                self.data = to_configs(json.loads(json.dumps([{
+                self.__data = to_configs(json.loads(json.dumps([{
                     'pattern': 'light',
                     'color1': {'red': 255, 'green': 255, 'blue': 255},
                     'color2': {'red': 255, 'green': 255, 'blue': 255},
@@ -476,7 +462,7 @@ class WS281x(ModuleLooper):
                     'color12': {'red': 255, 'green': 255, 'blue': 255},
                     'wait': 50, 'width': 3, 'fading': 0, 'min': 0, 'max': 100}])))
             elif payload == "OFF":
-                self.data = to_configs(json.loads(json.dumps([{
+                self.__data = to_configs(json.loads(json.dumps([{
                     'pattern': 'light',
                     'color1': {'red': 0, 'green': 0, 'blue': 0},
                     'color2': {'red': 0, 'green': 0, 'blue': 0},
@@ -497,7 +483,7 @@ class WS281x(ModuleLooper):
                     red = int(rgb[0])
                     green = int(rgb[1])
                     blue = int(rgb[2])
-                    self.data = to_configs(json.loads(json.dumps([{
+                    self.__data = to_configs(json.loads(json.dumps([{
                         'pattern': 'light',
                         'color1': {'red': red, 'green': green, 'blue': blue},
                         'color2': {'red': red, 'green': green, 'blue': blue},
@@ -518,7 +504,7 @@ class WS281x(ModuleLooper):
             else:
                 try:
                     value = int(255.0 * float(payload) / 100)
-                    self.data = to_configs(json.loads(json.dumps([{
+                    self.__data = to_configs(json.loads(json.dumps([{
                         'pattern': 'light',
                         'color1': {'red': value, 'green': value, 'blue': value},
                         'color2': {'red': value, 'green': value, 'blue': value},
@@ -538,14 +524,14 @@ class WS281x(ModuleLooper):
                     traceback.print_exc()
         elif len(path) == 1 and path[0] == "set":
             try:
-                self.data = to_configs(json.loads(payload))
+                self.__data = to_configs(json.loads(payload))
             except ValueError:
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
         elif len(path) == 1 and path[0] == "add":
             try:
                 extension = to_configs(json.loads(payload))
-                self.data.extend(extension)
+                self.__data.extend(extension)
             except ValueError:
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
@@ -561,11 +547,11 @@ class WS281x(ModuleLooper):
         elif message.startswith("BT:IDD:"):
             pass
         elif message.startswith("WS:"):
-            self.data = to_configs(json.loads(message[3:]))
+            self.__data = to_configs(json.loads(message[3:]))
 
     def on_serial_message(self, message):
         try:
-            self.data = to_configs(json.loads(message))
+            self.__data = to_configs(json.loads(message))
         except ValueError:
             self.logger.error('Oops!  That was no valid JSON.  Try again...')
             traceback.print_exc()
@@ -573,44 +559,29 @@ class WS281x(ModuleLooper):
     def looper(self):
         iteration = 0
 
-        if self.startup_file is not None:
+        if self.__startup_file is not None:
             try:
-                self.data = to_configs(json.load(open(self.startup_file)))
-                self.logger.info('Startup: ' + str(len(self.data)) + ' items')
+                self.__data = to_configs(json.load(open(self.__startup_file)))
+                self.logger.info('Startup: ' + str(len(self.__data)) + ' items')
             except ValueError:
                 self.logger.error('Oops!  That was no valid JSON.  Try again...')
                 traceback.print_exc()
 
-        # lastRestartChange = os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0
-        # (os.path.getmtime(REBOOT_PATH) if os.path.exists(REBOOT_PATH) else 0) == lastRestartChange:
-        while not self.interrupted:
-            if len(self.data) == 0:
+        while not self.is_interrupted():
+            if len(self.__data) == 0:
                 self.light(Config(wait=10, minimum=50, maximum=80))
                 continue
 
-            # index = iteration  # start + (iteration % (len(self.data) - start))
-            if iteration > len(self.data):
+            if iteration > len(self.__data):
                 iteration = 0
-            config = self.data[iteration]
+            config = self.__data[iteration]
 
             if config.pattern == 'clear':
-                del self.data[:iteration + 1]
+                del self.__data[:iteration + 1]
                 iteration = 0
 
-            # start = index + 1
-            # self.logger.info('Cleared index=' + str(index) + ', length=' + str(len(self.data)))
-            # + ', start=' + str(start))
-            # index = 0  # start + (iteration % (len(self.data) - start))
-            config = self.data[iteration]
+            config = self.__data[iteration]
 
-            # self.logger.debug(
-            #    'Iteration: ' + str(iteration) + ': ' + config.pattern
-            #    + ' c1=' + str(config.color1) + ', c2=' + str(config.color2) + ', c3=' + str(config.color3) + ','
-            #    + ' c4=' + str(config.color4) + ', c5=' + str(config.color5) + ', c6=' + str(config.color6) + ','
-            #    + ' c7=' + str(config.color7) + ', c8=' + str(config.color8) + ', c9=' + str(config.color3) + ','
-            #    + ' c10=' + str(config.color10) + ', c11=' + str(config.color11) + ', c12=' + str(config.color12) + ','
-            #    + ' wait=' + str(config.wait) + 'ms, width=' + str(config.width) + ','
-            #    + ' fading=' + str(config.fading) + ', min=' + str(config.min) + ', max=' + str(config.max))
             if config.pattern == 'wipe':
                 self.wipe(config)
             elif config.pattern == 'light':
@@ -653,5 +624,5 @@ class WS281x(ModuleLooper):
                                  maximum=80))
 
             iteration = iteration + 1
-            if iteration >= len(self.data):
+            if iteration >= len(self.__data):
                 iteration = 0

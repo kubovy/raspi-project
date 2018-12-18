@@ -2,7 +2,7 @@
 import time
 import math
 import smbus
-from modules.Logger import Logger
+from lib.Logger import Logger
 
 # ============================================================================
 # Raspi PCA9685 16-Channel PWM Servo Driver
@@ -86,17 +86,3 @@ class PCA9685:
         self.write(self.__PRESCALE, 0x00)
         self.setPWM(channel, 0, 0)
 
-
-if __name__ == '__main__':
-
-    pwm = PCA9685(0x40, debug=True)
-    pwm.setPWMFreq(50)
-    while True:
-        # setServoPulse(2,2500)
-        for i in range(500, 2500, 10):
-            pwm.setServoPulse(0, i)
-            time.sleep(0.02)
-
-        for i in range(2500, 500, -10):
-            pwm.setServoPulse(0, i)
-            time.sleep(0.02)
