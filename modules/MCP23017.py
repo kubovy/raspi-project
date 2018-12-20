@@ -61,6 +61,9 @@ class MCP23017(ModuleLooper):
                 j = idx % 2
                 self.__bus.write_byte_data(self.__devices[i], self.__olats[j], self.__output_cache[idx])
 
+    def initialize(self):
+        self.__read_all_registers(notify=False)
+
     def get(self, bit, value=None):
         idx = int(math.floor(bit / 16.0))
         gpio = self.__gpios[int(math.floor(bit / 8.0)) % 2]
@@ -123,29 +126,31 @@ class MCP23017(ModuleLooper):
             self.set(int(path[0]), payload.lower() == "true" or payload.lower() == "on")
 
     def looper(self):
-        # Status von GPIOA Register auslesen
-        current = []
+        self.__read_all_registers()
+        time.sleep(0.05)
+
+    def __read_all_registers(self, notify=True):
+        idx = 0
         for device in self.__devices:
             for gpio in self.__gpios:
-                current.append(self.__bus.read_byte_data(device, gpio))
+                buttons = self.__bus.read_byte_data(device, gpio)
+                if self.__input_cache[idx] != buttons:
+                    # changed = True
+                    for bit in range(8):
+                        cache = self.get(bit, self.__input_cache[idx])
+                        current = self.get(idx * 8 + bit)
 
-        # changed = False
-        for idx, buttons in enumerate(current):
-            if self.__input_cache[idx] != buttons:
-                # changed = True
-                for bit in range(8):
-                    cache = self.get(bit, self.__input_cache[idx])
-                    current = self.get(idx * 8 + bit)
-
-                    if current != cache:
-                        address = "{:02x}".format(self.__devices[int(math.floor(idx / 2.0))])
-                        part = "AB"[idx % 2]
-                        self.logger.debug("" + address + "/" + str(part) + "/" + str(bit) +
-                                          " [" + str(idx * 8 + bit) + "]: " + str(cache) + " -> " + str(current))
-                        if self.module_mqtt is not None:
-                            self.module_mqtt.publish("state/" + str(idx * 8 + bit), "ON" if current else "OFF",
-                                                     module=self)
-                        for listener in self.__listeners:
-                            listener.on_mcp23017_change(idx * 8 + bit, current)
-                self.__input_cache[idx] = buttons
-        time.sleep(0.05)
+                        if current != cache:
+                            address = "{:02x}".format(self.__devices[int(math.floor(idx / 2.0))])
+                            part = "AB"[idx % 2]
+                            self.logger.debug("" + address + "/" + str(part) + "/" + str(bit) +
+                                              " [" + str(idx * 8 + bit) + "]: " + str(cache) + " -> " + str(
+                                current))
+                            if notify:
+                                if self.module_mqtt is not None:
+                                    self.module_mqtt.publish("state/" + str(idx * 8 + bit), "ON" if current else "OFF",
+                                                             module=self)
+                                for listener in self.__listeners:
+                                    listener.on_mcp23017_change(idx * 8 + bit, current)
+                    self.__input_cache[idx] = buttons
+                idx = idx + 1
