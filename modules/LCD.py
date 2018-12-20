@@ -74,7 +74,26 @@ class LCD(ModuleLooper):
         self.__setup()
 
     def post(self, message, line=-1):
-        if 1 <= line <= 4 and message is not None:
+        """Posts a message to a message queue to be displayed on the LCD
+
+        Message can take one of the following values:
+            - `None`:  will clear the LCD
+            - `True`:  will turn the LCD's backlight on
+            - `False`: will turn the LCD's backlight off
+            - "ON":    will turn the LCD's backlight on
+            - "OFF":   will turn the LCD's backlight off
+            - "RESET": will reset the LCD
+            - `str` with `line`:
+                - in the range between 1 and `rows`: will display the `message` on the `line` (truncated)
+                - outside that range: will display the message on the whole display. Line are separated by new line
+                  in the `message` string. Multiple messages can be displayed after each other with a pause between them
+                  if the `message` takes the following format: "message1{:delay_in_ms:}message2...".
+
+        :param message Message to be displayed
+        :param line line which the message should be displayed. If outside the range of 1-`rows` then the whole screen
+                    will be used.
+        """
+        if 1 <= line <= self.__rows and message is not None:
             self.__message_queue.append({'line': line, 'message': message})
         elif message is None:
             self.__message_queue.append(None)

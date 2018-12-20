@@ -62,7 +62,7 @@ class Logger:
             syslog.syslog(priority, message)
         if self.log_file is not None:
             try:
-                with open(self.log_file, "a+") as fp:
+                with open(self.log_file, "a") as fp:
                     fp.write(full_message + "\n")
             except:
                 traceback.print_exc()
