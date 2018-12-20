@@ -1,5 +1,68 @@
 # Raspberry Pi Project
 
+## Framework
+
+The framework tries to be as lightweight as possible allowing to implement new modules in the `modules` directory. Upon
+start of the `raspi-project.py` the `--modules` parameter specifies the modules which should be loaded.
+
+A module needs to be implemented in a file in the `modules` directory containing at least the module's class. The
+name of the file and the name of the class have to match the module name (came-cased). Two other version of the module's
+name are used: the module ID (a dash-cased) and snake-cased module name. The dash-case version is used in things i.e.
+MQTT path and the snake-cased version in things i.e. parameter names.
+
+Example:
+  - Module: `IRSensor`
+  - File name: `modules/IRSensor.py`
+  - Module ID: `ir-sensor`
+  - Module name: `ir_sensor`
+
+A module can define parameters in its constructor. In this case the parameter needs to be also specified in the
+`module_parameters` in `raspi-project.py`. A parameter's name needs to match in the definition with the constructor.
+
+Example:
+
+    'IRSensor': {
+        'pins': [[19, 16], "pin1,pin2", "IR sensor pins (default: 19,16)"]
+    },`
+
+will result into command line parameter `--ir-sensor-pins` with the default value "_19,16_"
+
+If this conventions is followed the modules will be loaded properly.
+
+A module should implement one of `Module`, `ModuleLooper` or `ModuleTimer`.
+
+### Dependency injection
+
+A module may depend or use another module. In this case no hard wiring is required and all such dependencies should be
+implemented as optional. To inject one module into another a property `module_{module_name} = None` should put into the
+module which wants to use another module. 
+
+A commonly injected module is the MQTT module. E.g. the Bluetooth module wants to relay all the Bluetooth message to the
+MQTT queue. By creating the `module_mqtt = None` property in the `Bluetooth` module's class the MQTT module will be
+injected upon initialization if both modules, the MQTT module and the Bluetooth module, were defined using the 
+`--modules` parameters. Should only the Bluetooth module be specified the `module_mqtt` property will remain `None`.
+This should be taken into consideration when calling the dependency's methods directly, e.g.:
+
+    if self.module_mqtt is not None:
+         self.module_mqtt.publish("some/path", "some payload", module=self)
+
+The Bluetooth module wants also to relay all MQTT messages to the Bluetooth devices. This can be done by implementing
+the `on_mqtt_message(self, path, payload)` method in the `Bluetooth` module. To allow that the `MQTT` modules implents
+a `register` method which is called after initialization with one parameter, the listener. The listener is expected to
+implement that method. What method needs to be implemented depends on the dependency's implementation of the `register`
+method.
+
+A certain initialization flow needs to be considered regarding this dependency injection.
+ 1) First all the modules are instantiated. At this point no dependencies were injected yet an all the `module_*`
+    properties are still `None`. Therfore they should not be used in the constructor. 
+ 2) Next, all instantiated dependencies are injected. Those not selected with the `--modules` parameter will remain 
+    `None`.
+ 3) Next, the method `initialize()` will be called on all instantiated modules. Here the dependencies are already
+    injected and any initialization which needs them can be done here.
+ 4) If the module implement a `start()` method (e.g. `ModuleLooper`) and a parameter `--{module-name}-start` was defined
+    in `module_parameters` and such parameter has the default value `True` or was specified upon start, the `start()`
+    method will be called.
+
 ## MQTT API
 
 The general convention of the topics follows the following format: `{service}/[state|control]/[module]/#`
