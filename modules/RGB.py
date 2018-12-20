@@ -57,6 +57,9 @@ class RGB(ModuleLooper):
         self.__pi.set_PWM_dutycycle(self.PIN_BLUE, blue)
         if update and self.module_mqtt is not None:
             self.module_mqtt.publish("", str(red) + "," + str(green) + "," + str(blue), module=self)
+            for listener in self.listeners:
+                if hasattr(listener, 'on_rgb_change'):
+                    listener.on_rgb_change(red, green, blue)
 
     def on_mqtt_message(self, path, payload):
         rgb = payload.split(",")
@@ -102,9 +105,10 @@ class RGB(ModuleLooper):
                 if self.is_interrupted():
                     break
 
-            if self.__pattern == self.PATTERN_FADEOUT:
-                self.__red = self.__green = self.__blue = 0
-            self.set_color(update=True)
+            self.set_color(red=self.__red if self.__pattern == self.PATTERN_FADEIN else 0,
+                           green=self.__green if self.__pattern == self.PATTERN_FADEIN else 0,
+                           blue=self.__blue if self.__pattern == self.PATTERN_FADEIN else 0,
+                           update=self.__iteration == 0)
             self.__iteration = self.__iteration + 1
         else:
             time.sleep(0.5)

@@ -28,7 +28,6 @@ class SerialReader(ModuleLooper):
     __mode = 0
     __fast_success = True
     __content = ""
-    __listeners = []
     __serial_ports = []
     __buffers = []
 
@@ -39,14 +38,6 @@ class SerialReader(ModuleLooper):
         for i in range(len(self.__ports)):
             self.__serial_ports.append(None)
             self.__buffers.append(None)
-
-    def register(self, listener):
-        if listener not in self.__listeners:
-            self.__listeners.append(listener)
-
-    def finalize(self):
-        super(SerialReader, self).finalize()
-        self.__listeners = []
 
     def looper(self):
         for i in range(len(self.__ports)):
@@ -206,6 +197,7 @@ class SerialReader(ModuleLooper):
 
     def __write_result__(self):
         self.logger.info("Message: " + self.__content)
-        for listener in self.__listeners:
-            listener.on_serial_message(self.__content)
+        for listener in self.listeners:
+            if hasattr(listener, 'on_serial_message'):
+                listener.on_serial_message(self.__content)
         self.__content = ""

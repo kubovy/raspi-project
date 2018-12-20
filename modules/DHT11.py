@@ -55,6 +55,12 @@ class DHT11(Module):
             self.module_mqtt.publish("temperature", str(temperature), retrain=True, module=self)
             self.module_mqtt.publish("last-update", str(int(round(time.time()))), retrain=True, module=self)
 
+            for listener in self.listeners:
+                if hasattr(listener, 'on_temperature_changed'):
+                    listener.on_temperature_changed(temperature)
+                if hasattr(listener, 'on_humidity_changed'):
+                    listener.on_humidity_changed(humidity)
+
         if not self.finalizing:
             self.__timer = Timer(self.__interval, self.__trigger)
             self.__timer.start()

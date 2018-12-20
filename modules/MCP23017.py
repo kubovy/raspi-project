@@ -38,8 +38,6 @@ class MCP23017(ModuleLooper):
         [0xFF, 0x07]
     ]
 
-    __listeners = []
-
     def __init__(self, debug=False):
         super(MCP23017, self).__init__(debug=debug)
 
@@ -106,11 +104,6 @@ class MCP23017(ModuleLooper):
                 olat = self.__olats[idx % 2]
                 self.__bus.write_byte_data(device, olat, self.__output_cache[idx])
 
-    def register(self, listener):
-        self.logger.debug("Registring " + str(listener))
-        if listener not in self.__listeners:
-            self.__listeners.append(listener)
-
     def reset(self):
         for device in self.__devices:
             for olat in self.__olats:
@@ -118,12 +111,13 @@ class MCP23017(ModuleLooper):
 
     def finalize(self):
         super(MCP23017, self).finalize()
-        self.__listeners = []
         self.reset()
 
     def on_mqtt_message(self, path, payload):
         if len(path) > 0:  # {service}/control/mcp23017/{bit}
             self.set(int(path[0]), payload.lower() == "true" or payload.lower() == "on")
+        else:
+            super(MCP23017, self).on_mqtt_message(path, payload)
 
     def looper(self):
         self.__read_all_registers()
@@ -150,7 +144,8 @@ class MCP23017(ModuleLooper):
                                 if self.module_mqtt is not None:
                                     self.module_mqtt.publish("state/" + str(idx * 8 + bit), "ON" if current else "OFF",
                                                              module=self)
-                                for listener in self.__listeners:
-                                    listener.on_mcp23017_change(idx * 8 + bit, current)
+                                for listener in self.listeners:
+                                    if hasattr(listener, 'on_mcp23017_change'):
+                                        listener.on_mcp23017_change(idx * 8 + bit, current)
                     self.__input_cache[idx] = buttons
                 idx = idx + 1

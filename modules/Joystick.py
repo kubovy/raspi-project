@@ -75,6 +75,8 @@ class Joystick(ModuleLooper):
                 self.start("CAMERA")
             else:
                 self.stop()
+        else:
+            super(Joystick, self).on_mqtt_message(path, payload)
 
     def looper(self):
         if GPIO.input(self.__pin_center) == 0:

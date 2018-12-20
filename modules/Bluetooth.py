@@ -29,7 +29,6 @@ class Bluetooth(ModuleLooper):
     __buffer_incoming = ""
     __sockets = []
     __connections = []
-    __listeners = []
 
     module_mqtt = None
 
@@ -38,13 +37,6 @@ class Bluetooth(ModuleLooper):
         self.__client_id = client_id
         self.__inbound_ports = inbound_ports if inbound_ports is not None else [3]
         self.__outbound_ports = outbound_ports if outbound_ports is not None else [4]
-
-    def register(self, listener):
-        """Register a listener to bluetooth messages. Such listener must implement on_bluetooth_message(message)
-        method."""
-
-        if listener not in self.__listeners:
-            self.__listeners.append(listener)
 
     def send(self, message):
         """Send a message via bluetooth
@@ -91,9 +83,6 @@ class Bluetooth(ModuleLooper):
         for thread in threads:
             thread.join(1)
 
-    def finalize(self):
-        self.__listeners = []
-
     def __notify(self, message):
         if self.module_mqtt is not None:
             parts = message.split(":", 2)
@@ -102,7 +91,7 @@ class Bluetooth(ModuleLooper):
             elif len(parts) > 0:
                 self.module_mqtt.publish("", parts[0], module=self)
 
-        for listener in self.__listeners:
+        for listener in self.listeners:
             if hasattr(listener, 'on_bluetooth_message'):
                 listener.on_bluetooth_message(message)
 

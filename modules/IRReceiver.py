@@ -77,6 +77,8 @@ class IRReceiver(ModuleLooper):
                         [[0, 0, 255], [0, 0, 0], [0, 0, 0], [0, 0, 255]],
                         [[255, 0, 0], [0, 0, 0], [0, 0, 0], [255, 0, 0]]
                     ], [0.5, 1.0])
+        else:
+            super(IRReceiver, self).on_mqtt_message(path, payload)
 
     def perform(self, action):
         self.logger.info("Performing: " + str(action))

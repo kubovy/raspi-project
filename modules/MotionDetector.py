@@ -28,11 +28,10 @@ class MotionDetector(Module):
             self.module_mqtt.publish("", "CLOSED", module=self)
 
     def __motion__(self, pin):
-        if GPIO.input(pin):
-            self.logger.info("Motion Detected!")
-            if self.module_mqtt is not None:
-                self.module_mqtt.publish("", "OPEN", module=self)
-        else:
-            self.logger.info("Motion stopped.")
-            if self.module_mqtt is not None:
-                self.module_mqtt.publish("", "CLOSED", module=self)
+        state = GPIO.input(pin)
+        self.logger.info("Motion " + ("detected!" if state else "stopped."))
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("", "OPEN" if state else "CLOSED", module=self)
+        for listener in self.listeners:
+            if hasattr(listener, 'on_motion_change'):
+                listener.on_motion_change(state)

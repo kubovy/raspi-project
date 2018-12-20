@@ -6,7 +6,6 @@
 import RPi.GPIO as GPIO
 
 from lib.Module import Module
-from lib.ModuleMQTT import ModuleMQTT
 
 
 class WaterDetector(Module):
@@ -29,11 +28,12 @@ class WaterDetector(Module):
             self.module_mqtt.publish("", "CLOSED", module=self)
 
     def __water__(self, pin):
-        if GPIO.input(pin):
-            self.logger.info("No water.")
-            if self.module_mqtt is not None:
-                self.module_mqtt.publish("", "CLOSED", module=self)
-        else:
-            self.logger.info("Water detected.")
-            if self.module_mqtt is not None:
-                self.module_mqtt.publish("", "OPEN", module=self)
+        state = not GPIO.input(pin)
+        self.logger.info("Water detected!" if state else "No water.")
+
+        if self.module_mqtt is not None:
+            self.module_mqtt.publish("", "OPEN" if state else "CLOSED", module=self)
+
+        for listener in self.listeners:
+            if hasattr(listener, 'on_water_change'):
+                listener.on_water_change(state)

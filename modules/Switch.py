@@ -54,13 +54,16 @@ class Switch(ModuleLooper):
                 self.__pattern = ""
                 self.set_value(update=True)
 
-    def set_value(self, switch=None, update=False):
-        switch = switch if switch is not None else self.__value
-        self.logger.debug("Setting to " + str(switch))
-        self.__pi.set_PWM_dutycycle(self.__pin, switch)
+    def set_value(self, value=None, update=False):
+        value = value if value is not None else self.__value
+        self.logger.debug("Setting to " + str(value))
+        self.__pi.set_PWM_dutycycle(self.__pin, value)
 
         if update and self.module_mqtt is not None:
-            self.module_mqtt.publish("", str(switch), module=self)
+            self.module_mqtt.publish("", str(value), module=self)
+            for listener in self.listeners:
+                if hasattr(listener, 'on_switch_change'):
+                    listener.on_switch_change(value)
 
     def looper(self):
         if (self.__pattern == self.PATTERN_FADEIN or self.__pattern == self.PATTERN_FADEOUT) \
@@ -70,15 +73,13 @@ class Switch(ModuleLooper):
 
             for percent in percent_range:
                 self.logger.debug("Percent: " + str(percent))
-                switch = int(float(self.__value) * float(percent) / 100.0)
-                self.set_value(switch=switch, update=False)
+                value = int(float(self.__value) * float(percent) / 100.0)
+                self.set_value(value=value, update=False)
                 time.sleep(self.__interval)
                 if self.is_interrupted():
                     break
 
-            if self.__pattern == self.PATTERN_FADEOUT:
-                self.__value = 0
-            self.set_value(update=True)
+            self.set_value(value=self.__value if self.PATTERN_FADEIN else 0, update=self.__iteration == 0)
             self.__iteration = self.__iteration + 1
         else:
             time.sleep(0.5)

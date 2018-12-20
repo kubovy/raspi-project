@@ -12,8 +12,6 @@ from lib.Util import to_snake_case
 class MQTT(ModuleLooper):
     """MQTT Module"""
 
-    __listeners = {}
-
     def __init__(self, client_id, host, port=1883, debug=False):
         super(MQTT, self).__init__(debug=debug)
 
@@ -27,15 +25,6 @@ class MQTT(ModuleLooper):
         self.client.connect(host, port, 60)  # connect to broker
         self.client.publish("status", "OPEN", 1, True)
         self.client.on_message = self.__on_message
-
-    def register(self, listener):
-        module_id = to_snake_case(type(listener).__name__, "-")
-        if module_id not in self.__listeners.keys():
-            subscription = self.client_id + "/control/" + module_id + "/#"
-            self.logger.debug("Subscribing " + module_id + " to MQTT topic: " + subscription)
-            # self.client.message_callback_add(subscription, self.__on_message__)
-            self.__listeners[module_id] = {'module': listener, 'subscription': subscription}
-            # listener.__class__.publish = self.get_publish_method(module_name)
 
     def publish(self, topic, payload=None, qos=0, retrain=False, module=None):
         path = [self.client_id, 'state']
@@ -52,10 +41,6 @@ class MQTT(ModuleLooper):
 
     def finalize(self):
         super(MQTT, self).finalize()
-        for module_id in self.__listeners.keys():
-            subscription = self.__listeners[module_id]['subscription']
-            self.client.message_callback_remove(subscription)
-            self.__listeners.pop(module_id, None)
         self.client.publish("status", "CLOSED", 1, True)
         self.logger.debug("Disconnecting from MQTT broker...")
         self.client.disconnect()
@@ -87,9 +72,10 @@ class MQTT(ModuleLooper):
             #         if hasattr(self, 'interrupted'):
             #             self.interrupted = True
 
-            for module_name, listener in self.__listeners.items():
+            for listener in self.listeners:
+                module_name = to_snake_case(type(listener).__name__, "-")
                 if len(path) > 2 and path[0] == self.client_id and path[1] == "control" and path[2] == module_name:
-                    if hasattr(listener['module'], 'on_mqtt_message'):
-                        listener['module'].on_mqtt_message(path[3:], msg.payload)  # {service}/control/{module}/#
+                    if hasattr(listener, 'on_mqtt_message'):
+                        listener.on_mqtt_message(path[3:], msg.payload)  # {service}/control/{module}/#
         except Exception as e:
             self.logger.error("Unexpected error: " + e.message)

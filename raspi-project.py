@@ -84,6 +84,10 @@ module_parameters = {
         'pin': [18, "pin", "Pixels pin (default: 18)"],
         'count': [4, "count", "Count of LEDs (default: 4)"]
     },
+    'Prometheus': {
+        'port': [11354, "port", "HTTP server port"],
+        'interval': [15, "interval", "Interval between polls"]
+    },
     'SerialReader': {
         'identifier': ['20180214', "identifier", "Serial reader idenfifier (default: 20180214)"],
         'ports': [[], "port1[,port2[,...]]", "Serial reader ports (default: None)"],

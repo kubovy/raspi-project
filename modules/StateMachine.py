@@ -203,6 +203,7 @@ class StateMachine(ModuleLooper):
                 self.logger.error('Oops!')
                 traceback.print_exc()
         else:
+            super(StateMachine, self).on_mqtt_message(path, payload)
             self.logger.debug("Current state: " + str(self.__current_state['name']))
 
     def on_mcp23017_change(self, bit, value):

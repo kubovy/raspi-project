@@ -70,4 +70,7 @@ class Ultrasonic(ModuleLooper):
         self.logger.info("Distance: " + str(distance) + "mm")
         if self.module_mqtt is not None:
             self.module_mqtt.publish("", str(distance), module=self)
+        for listener in self.listeners:
+            if hasattr(listener, 'on_distance_change'):
+                listener.on_distance_change(distance)
         time.sleep(self.__delay)

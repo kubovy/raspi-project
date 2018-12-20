@@ -31,6 +31,10 @@ class Camera(ModuleLooper):
             if self.__last_state != state:
                 if self.module_mqtt is not None:
                     self.module_mqtt.publish("", "ON" if state else "OFF", module=self)
+
+                for listener in self.listeners:
+                    if hasattr(listener, 'on_camera_switch'):
+                        listener.on_camera_switch(state)
         except:
             self.logger.error("Unexpected Error!")
             traceback.print_exc()
@@ -41,3 +45,6 @@ class Camera(ModuleLooper):
             call(["/usr/local/bin/mjpeg-streamer", "start"])
         else:
             call(["/usr/local/bin/mjpeg-streamer", "stop"])
+        for listener in self.listeners:
+            if hasattr(listener, 'on_camera_switch'):
+                listener.on_camera_switch(payload == "ON")

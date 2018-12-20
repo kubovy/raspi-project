@@ -10,12 +10,19 @@ class Module(object):
     """Top module abstraction"""
 
     finalizing = False
+    listeners = []
 
     def __init__(self, **kwargs):
         self.logger = Logger(type(self).__name__, kwargs['debug'] if 'debug' in kwargs.keys() else False)
 
     def initialize(self):
         self.logger.debug("Initializing...")
+
+    def register(self, listener):
+        """Register a listener."""
+        self.logger.debug("Registring: " + str(listener))
+        if listener not in self.listeners:
+            self.listeners.append(listener)
 
     def start(self):
         """Module's start trigger.
@@ -52,4 +59,5 @@ class Module(object):
     def finalize(self):
         """Final cleanup before unloading the module."""
         self.logger.debug("Finalizing...")
+        self.listeners = []
         self.finalizing = True
