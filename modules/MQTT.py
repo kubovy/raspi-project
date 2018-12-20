@@ -3,6 +3,8 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
+import traceback
+
 import paho.mqtt.client as mqtt
 
 from lib.ModuleLooper import ModuleLooper
@@ -33,7 +35,7 @@ class MQTT(ModuleLooper):
         if topic is not None and topic != "":
             path.append(topic)
         self.logger.debug("Publishing: " + "/".join(path) + " qos=" + str(qos) + ", retain=" + str(retrain) + ": " +
-                          payload)
+                          str(payload))
         self.client.publish("/".join(path), payload, qos, retrain)
 
     def looper(self):
@@ -79,3 +81,4 @@ class MQTT(ModuleLooper):
                         listener.on_mqtt_message(path[3:], msg.payload)  # {service}/control/{module}/#
         except Exception as e:
             self.logger.error("Unexpected error: " + e.message)
+            traceback.print_exc()
