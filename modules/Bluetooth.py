@@ -31,6 +31,8 @@ class Bluetooth(ModuleLooper):
     __connections = []
     __listeners = []
 
+    module_mqtt = None
+
     def __init__(self, client_id, inbound_ports=None, outbound_ports=None, debug=False):
         super(Bluetooth, self).__init__(debug=debug)
         self.__client_id = client_id
@@ -50,6 +52,10 @@ class Bluetooth(ModuleLooper):
         :param message: Message to send
         """
         self.__buffer_outgoing.append(message)
+
+    def on_mqtt_message(self, path, payload):
+        prefix = ":".join(map(lambda s: s.upper(), path))
+        self.send(prefix + (":" if prefix is not None and prefix != '' else "") + payload)
 
     def looper(self):
         threads = []
@@ -89,6 +95,13 @@ class Bluetooth(ModuleLooper):
         self.__listeners = []
 
     def __notify(self, message):
+        if self.module_mqtt is not None:
+            parts = message.split(":", 2)
+            if len(parts) > 1:
+                self.module_mqtt.publish(parts[0].lower(), parts[1], module=self)
+            elif len(parts) > 0:
+                self.module_mqtt.publish("", parts[0], module=self)
+
         for listener in self.__listeners:
             if hasattr(listener, 'on_bluetooth_message'):
                 listener.on_bluetooth_message(message)
