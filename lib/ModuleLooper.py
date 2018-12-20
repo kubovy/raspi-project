@@ -95,4 +95,5 @@ class ModuleLooper(Module):
             except:
                 self.logger.error("Unexpected Error!")
                 traceback.print_exc()
+        self.__thread = None
         self.logger.info("Exiting looper")

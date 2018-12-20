@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
 
 cd $(dirname $0)
-sudo -u pi git pull
-if [[ -z $1 || -z $2 ]]; then
-    python ./main.py --help
-    exit 1
-fi
 
 sudo pigpiod # If needed
 
-# Edit the following line
-sudo python ./main.py $1 $2 -d -m comma,separated,modules,here
+touch /tmp/raspi-project.stop
+sleep 5
+
+sudo pkill -f raspi-project.py
+sleep 2
+
+sudo rm -f /tmp/raspi-project.stop
+
+while [[ ! -f /tmp/raspi-project.stop ]]; do
+    # Edit the following line
+    sudo python2 ./raspi-project.py russula --debug --broker tylopilus.intra --module commander,switch,motion-detector
+done
