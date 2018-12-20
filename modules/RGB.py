@@ -57,6 +57,8 @@ class RGB(ModuleLooper):
         self.__pi.set_PWM_dutycycle(self.PIN_BLUE, blue)
         if update and self.module_mqtt is not None:
             self.module_mqtt.publish("", str(red) + "," + str(green) + "," + str(blue), module=self)
+            self.module_mqtt.publish("percent", int((red + green + blue) * 100.0 / 255.0 / 3.0))
+
             for listener in self.listeners:
                 if hasattr(listener, 'on_rgb_change'):
                     listener.on_rgb_change(red, green, blue)
@@ -65,6 +67,10 @@ class RGB(ModuleLooper):
         rgb = payload.split(",")
         if payload.upper() in ["ON", "OFF"]:
             self.__red = self.__green = self.__blue = 255 if payload.upper() == "ON" else 0
+            self.__pattern = ""
+            self.set_color(update=True)
+        elif len(path) == 1 and path[0] == "percent":
+            self.__red = self.__green = self.__blue = int(255 * int(rgb[0]) / 100.0)
             self.__pattern = ""
             self.set_color(update=True)
         elif len(rgb) == 1:

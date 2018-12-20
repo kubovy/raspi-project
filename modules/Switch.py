@@ -38,6 +38,10 @@ class Switch(ModuleLooper):
             self.__value = 255 if payload.upper() == "ON" else 0
             self.__pattern = ""
             self.set_value(update=True)
+        elif len(path) == 1 and path[0] == "percent":
+            self.__value = int(255 * int(payload) / 100.0)
+            self.__pattern = ""
+            self.set_value(update=True)
         else:
             value = payload.split(",")
             self.__value = int(value[0])
@@ -61,6 +65,7 @@ class Switch(ModuleLooper):
 
         if update and self.module_mqtt is not None:
             self.module_mqtt.publish("", str(value), module=self)
+            self.module_mqtt.publish("percent", int(value * 100.0 / 255.0))
             for listener in self.listeners:
                 if hasattr(listener, 'on_switch_change'):
                     listener.on_switch_change(value)
