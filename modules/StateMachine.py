@@ -5,7 +5,6 @@
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
 import ast
-import copy
 import json
 import time
 import traceback
@@ -15,6 +14,22 @@ from jinja2 import Template
 
 from lib.FileWatcherHandler import observe
 from lib.ModuleLooper import ModuleLooper
+
+
+def _reference_based_value(value, reference):
+    if value is None:
+        if isinstance(reference, str):
+            return ""
+        elif isinstance(reference, bool):
+            return False
+        elif isinstance(reference, int):
+            return 0
+        elif isinstance(reference, float):
+            return 0.0
+        else:
+            return None
+    else:
+        return value
 
 
 class StateMachine(ModuleLooper):
@@ -107,19 +122,19 @@ class StateMachine(ModuleLooper):
         else:
             self.on_stop()
 
-    def transit(self, new_state):
+    def transit(self, new_state_name):
         self.logger.info("Transiting " + (self.__current_state['name'] if self.__current_state is not None else "N/A") +
-                         " -> " + new_state)
-        self.__current_state = self.__states[new_state]
+                         " -> " + new_state_name)
+        self.__current_state = self.__states[new_state_name]
 
-        self.logger.debug("Evaluating gate \"enter\" in " + str(new_state) + " state")
-        self.__evaluate("enter")
-        self.logger.debug("Evaluating gate \"initializing\" in " + str(new_state) + " state")
-        self.__evaluate("initializing")
-        self.logger.debug("Evaluating gate \"initialized\" in " + str(new_state) + " state")
-        self.__evaluate("initialized")
-        if self.__current_state is not None and new_state == self.__current_state['name']:
-            self.logger.debug("Evaluating gate \"normal\" in " + str(new_state) + " state")
+        self.logger.debug("Evaluating gate \"ENTER\" in \"" + str(new_state_name) + "\" state")
+        self.__evaluate("ENTER")
+        self.logger.debug("Evaluating gate \"INITIALIZING\" in \"" + str(new_state_name) + "\" state")
+        self.__evaluate("INITIALIZING")
+        self.logger.debug("Evaluating gate \"INITIALIZED\" in \"" + str(new_state_name) + "\" state")
+        self.__evaluate("INITIALIZED")
+        if self.__current_state is not None and new_state_name == self.__current_state['name']:
+            self.logger.debug("Evaluating gate \"NORMAL\" in \"" + str(new_state_name) + "\" state")
 
     def get_state(self, item, key=None, state=None):
         state = self.__global_state if state is None else state
@@ -139,14 +154,12 @@ class StateMachine(ModuleLooper):
         if kind not in self.__global_state.keys() or self.__global_state[kind] is None:
             self.__global_state[kind] = {}
 
-        previous_state = copy.deepcopy(self.__global_state)
+        previous_state = deepcopy(self.__global_state)
         previous_value = self.get_state(kind, key)
         if previous_value != value:
             self.logger.debug(kind + "[" + str(key) + "]: " + str(previous_value) + " -> " + str(value))
             self.__global_state[kind][key] = value
-            self.__evaluate("normal", previous_state)
-
-        if previous_value != value:
+            self.__evaluate("NORMAL", previous_state)
             self.__template_variables_cache = None
         return previous_value != value
 
@@ -164,17 +177,15 @@ class StateMachine(ModuleLooper):
                                                    'vars': self.__variables,
                                                    'states': self.__states.values()}))
         elif message.startswith("TBC:"):
-            self.__transaction_start()
             for msg in message[4:].split(";"):
                 parts = msg.split(",", 3)
-                self.logger.debug(msg + " -> " + msg[4:] + " -> " + str(parts))
+                self.logger.debug(msg + " -> " + str(parts))
                 if len(parts) == 3 and parts[0] == 'action':
                     self.__execute({'name': parts[1], 'value': parts[2], 'eval': True})
                 elif len(parts) >= 2 and parts[0] == 'transit':
                     self.transit(parts[1])
-                elif len(parts) == 3:
+                elif len(parts) == 3 and parts[0] == 'state':
                     self.set_state('bluetooth', parts[1], parts[2])
-            self.__transaction_end()
 
     def on_mqtt_message(self, path, payload):
         if len(path) == 2:
@@ -258,7 +269,9 @@ class StateMachine(ModuleLooper):
         time.sleep(0.25)
 
     def __get_kind(self, item):
-        if 'kind' in item.keys():
+        if isinstance(item, basestring):
+            return "STR"
+        elif 'kind' in item.keys():
             return item['kind']
         elif 'name' in item.keys() and item['name'] in self.__devices.keys() and 'kind' in self.__devices[item['name']]:
             return self.__devices[item['name']]['kind']
@@ -267,7 +280,9 @@ class StateMachine(ModuleLooper):
 
     def __get_key(self, item):
         key = None
-        if 'key' in item.keys():
+        if isinstance(item, basestring):
+            key = item
+        elif 'key' in item.keys():
             key = item['key']
         elif 'name' in item.keys() and item['name'] in self.__devices and 'key' in self.__devices[item['name']]:
             key = self.__devices[item['name']]['key']
@@ -276,7 +291,7 @@ class StateMachine(ModuleLooper):
     def __get_descriptor(self, item):
         if item is not None:
             value = str(self.__get_kind(item)) + "[" + str(self.__get_key(item)) + "]"
-            if 'name' in item.keys():
+            if not isinstance(item, basestring) and 'name' in item.keys():
                 value += " (" + item['name'] + ")"
         else:
             value = "N/A"
@@ -315,7 +330,8 @@ class StateMachine(ModuleLooper):
                         try:
                             value = ast.literal_eval(value)
                         except BaseException as e:
-                            self.logger.error(e.message)
+                            self.logger.warn(str(e))
+                            # traceback.print_exc()
                 except AttributeError as e:
                     self.logger.error("Template attribute error: " + str(e.message))
                     traceback.print_exc()
@@ -331,61 +347,56 @@ class StateMachine(ModuleLooper):
             traceback.print_exc()
             return None
 
-    def __evaluate(self, gate="normal", previous_state=None):
+    def __evaluate(self, gate="NORMAL", previous_state=None):
+        """Evaluation
+
+        :param gate: one of: ENTER, INITIALIZING, INITIALIZED, NORMAL
+        """
         self.__transaction_start()
-        current_state = self.__current_state
+        current_state = deepcopy(self.__current_state)
         if current_state is not None and 'conditions' in current_state.keys():
             for condition in current_state['conditions']:
-                if current_state == self.__current_state \
-                        and ('only' not in condition.keys() or condition['only'] == gate):
+                if 'name' in current_state.keys() and 'name' in self.__current_state.keys() \
+                        and current_state['name'] == self.__current_state['name'] \
+                        and ('only' not in condition.keys() or condition['only'].upper() == gate):
                     # self.logger.debug("Condition: " + str(condition))
                     result = True
                     changed = False
                     if 'expressions' in condition.keys():
                         for expression in condition['expressions']:
-                            if isinstance(expression, basestring) \
-                                    or 'only' not in expression.keys() \
-                                    or expression['only'] == gate:
-                                if (gate == "normal" or gate == "initializing" or gate == "initialized") \
-                                        and not isinstance(expression, basestring):
-                                    value = self.__get_value(expression) if 'value' in expression.keys() else None
-                                    current = self.get_state(expression)
-                                    if current is None:
-                                        if isinstance(value, str):
-                                            current = ""
-                                        elif isinstance(value, bool):
-                                            current = False
-                                        elif isinstance(value, int):
-                                            current = 0
+                            additional_info = ""
+                            if isinstance(expression, basestring):
+                                result = result and expression.upper() == gate
+                                changed = True
+                            elif ('only' not in expression.keys() or expression['only'].upper() == gate) \
+                                    and gate in ["NORMAL", "INITIALIZING", "INITIALIZED"]:
+                                value = self.__get_value(expression) if 'value' in expression.keys() else None
+                                current = _reference_based_value(self.get_state(expression), value)
+                                previous = _reference_based_value(self.get_state(expression, state=previous_state)
+                                                                  if previous_state is not None else None, value)
 
-                                    previous = self.get_state(expression, state=previous_state) \
-                                        if previous_state is not None else None
-                                    if previous is None:
-                                        if isinstance(value, str):
-                                            previous = ""
-                                        elif isinstance(value, bool):
-                                            previous = False
-                                        elif isinstance(value, int):
-                                            previous = 0
-
-                                    result = result and (value is None or str(current) == str(value))
-                                    changed = changed or str(current) != str(previous) or gate != "normal"
-                                elif isinstance(expression, basestring):
-                                    result = result and expression.lower() == gate
-                                    changed = True
+                                result = result and (value is None or str(current) == str(value))
+                                changed = changed or str(current) != str(previous) or gate != "NORMAL"
+                                additional_info = str(previous) + " -> " + str(current) + " ?= " + str(value)
+                            self.logger.debug("Expression: " + self.__get_descriptor(expression) +
+                                              "in \"" + gate + "\" of \"" + current_state['name'] + "\" " +
+                                              additional_info + " => " + str(result) +
+                                              (" CHANGED " if changed else " UNCHANGED "))
                     else:
-                        result = gate == "enter"
+                        result = gate == "ENTER"
                         changed = True
 
-                    if result and changed and current_state == self.__current_state:
-                        # expression = condition['expression'] if 'expression' in condition.keys() else None
-                        # self.logger.debug("Condition: " + self.get_descriptor(expression) +
-                        #                   " in " + current_state['name'] + "[" + gate + "] state FIRED!")
+                    if 'name' in current_state.keys() and 'name' in self.__current_state.keys() \
+                            and current_state['name'] == self.__current_state['name'] \
+                            and result and changed:
+                        expression = condition['expression'] if 'expression' in condition.keys() else None
+                        self.logger.debug("Condition: " + self.__get_descriptor(expression) +
+                                          " in " + current_state['name'] + "[" + gate + "] state FIRED!")
                         if 'actions' in condition.keys():
                             for action in condition['actions']:
-                                # self.logger.debug(" -> action: " + self.get_descriptor(action))
-                                if 'only' not in action.keys() or action['only'] == gate:
-                                    self.__execute(action, gate in ['normal', 'initialized'])
+                                self.logger.debug(" -> action: " + self.__get_descriptor(action))
+                                if 'only' not in action.keys() or action['only'].upper() == gate:
+                                    self.__execute(action, gate in ['NORMAL', 'INITIALIZED'])
 
         self.__transaction_end()
 
