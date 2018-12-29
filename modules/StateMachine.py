@@ -267,7 +267,7 @@ class StateMachine(ModuleLooper):
                 time.sleep(int(delay) / 1000.0)
             self.transit(state)
 
-        time.sleep(0.25)
+        time.sleep(0.4)
 
     def __get_kind(self, item):
         if isinstance(item, basestring):
@@ -331,7 +331,7 @@ class StateMachine(ModuleLooper):
                         try:
                             value = ast.literal_eval(value)
                         except BaseException as e:
-                            self.logger.warn(str(e))
+                            self.logger.debug(str(e) + ' in "' + str(value).replace("\n", "\\n") + '"')
                             # traceback.print_exc()
                 except AttributeError as e:
                     self.logger.error("Template attribute error: " + str(e.message))

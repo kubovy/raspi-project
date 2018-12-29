@@ -49,7 +49,7 @@ class Prometheus(ModuleLooper):
         time.sleep(self.__interval)
 
     def on_bluetooth_message(self, message):
-        self.__bluetooth_message_count_metric.labels(host=self.__host, type='incoming').inc()
+        self.__bluetooth_message_count_metric.labels(host=self.__host, type='incoming', device='default').inc()
 
     def on_camera_switch(self, state):
         self.__camera_state_metric.labels(host=self.__host, label='default').set(1 if state else 0)

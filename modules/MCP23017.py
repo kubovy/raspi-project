@@ -51,6 +51,10 @@ class MCP23017(ModuleLooper):
 
         for idx, device in enumerate(self.__devices):
             for io, iodir in enumerate([self.IODIRA, self.IODIRB]):
+                self.logger.debug("Initilizing device " + "0x{:02X}".format(self.__devices[idx]) + " " +
+                                  ['GPIOA', 'GPIOB'][io] + " (" + '0x{:02X}'.format(self.__gpios[io]) + ") to " +
+                                  "0x{:02X}".format(self.__config[idx][io]) + " (" +
+                                  "0b{:08b}".format(self.__config[idx][io]) + ")")
                 self.__bus.write_byte_data(self.__devices[idx], iodir, self.__config[idx][io])
 
         for idx, output in enumerate(self.__output_cache):
@@ -91,9 +95,13 @@ class MCP23017(ModuleLooper):
         else:
             self.__output_cache[idx] = self.__output_cache[idx] & ~(1 << real_bit)
         # self.logger.debug(">>> " + str(idx) + "," + str(olat) + "," + str(real_bit) + ": " + str(real_value))
-        self.logger.debug("Bit " + str(real_bit) + ": " + str(value) + " -> " + str(real_value) +
-                          " Output: " + str(self.__output_cache[idx]) +
-                          " [" + '{0:08b}'.format(self.__output_cache[idx]) + "]")
+        self.logger.debug("Device " + '0x{:02X}'.format(device) + " " +
+                          ['OLATA', 'OLATB'][idx % 2] + " (" + '0x{:02X}'.format(olat) + ") " +
+                          "Bit " + str(real_bit) + ": " + str(value) + " " +
+                          (("(inversed from " + str(real_value) + ") ") if self.__inverse_output else "") +
+                          "Output: " + str(self.__output_cache[idx]) +
+                          " " + '0x{:02X}'.format(self.__output_cache[idx]) +
+                          " (" + '0b{:08b}'.format(self.__output_cache[idx]) + ")")
         if write:
             self.__bus.write_byte_data(device, olat, self.__output_cache[idx])
 
@@ -135,11 +143,10 @@ class MCP23017(ModuleLooper):
                         current = self.get(idx * 8 + bit)
 
                         if current != cache:
-                            address = "{:02x}".format(self.__devices[int(math.floor(idx / 2.0))])
-                            part = "AB"[idx % 2]
-                            self.logger.debug("" + address + "/" + str(part) + "/" + str(bit) +
-                                              " [" + str(idx * 8 + bit) + "]: " + str(cache) + " -> " + str(
-                                current))
+                            self.logger.debug("0x{:02X}".format(self.__devices[int(math.floor(idx / 2.0))]) + " " +
+                                              ["GPIOA", "GPIOB"][idx % 2] + " " +
+                                              "(" + '0x{:02X}'.format(self.__gpios[idx % 2]) + ") bit:" + str(bit) +
+                                              " [" + str(idx * 8 + bit) + "]: " + str(cache) + " -> " + str(current))
                             if notify:
                                 if self.module_mqtt is not None:
                                     self.module_mqtt.publish("state/" + str(idx * 8 + bit), "ON" if current else "OFF",
