@@ -114,7 +114,7 @@ class Bluetooth(ModuleLooper):
                 while not self.is_interrupted():
                     if len(self.__buffer_outgoing) > 0:
                         message = self.__buffer_outgoing[0]
-                        self.logger.debug("Outbound message: >>>" + message + "<<<")
+                        self.logger.info("Outbound message: " + message)
                         correctly_received = False
                         retries = 0
                         while not correctly_received and retries < 3:
@@ -129,11 +129,12 @@ class Bluetooth(ModuleLooper):
                             data = connection.recv(BUFFER)[:-1]
                             self.logger.debug("Outbound received: \"" + data + "\"")
                             ack = data.split(":", 2)
-                            self.logger.debug("Outbound " + ack[0] + ": calculated=" + str(crc32_calculated) +
-                                              ", received=" + ack[1] + " => " + str(crc32_calculated == long(ack[1])))
+                            self.logger.info("Outbound " + ack[0] + ": calculated=" + str(crc32_calculated) +
+                                             ", received=" + ack[1] + " => " + str(crc32_calculated == long(ack[1])))
                             correctly_received = crc32_calculated == long(ack[1])
                             retries = retries + 1
-                        self.__buffer_outgoing.pop(0)
+                        if correctly_received:
+                            self.__buffer_outgoing.pop(0)
                     else:
                         time.sleep(1)
             except BluetoothError as e:
@@ -176,7 +177,7 @@ class Bluetooth(ModuleLooper):
                         elif line == STX:
                             self.buffer_incoming = ""
                         elif line == ETX:
-                            self.logger.debug("Inbound message: " + self.buffer_incoming)
+                            self.logger.info("Inbound message: " + self.buffer_incoming)
                             self.__notify(self.buffer_incoming)
                             crc32_calculated = crc32(self.buffer_incoming) % (1 << 32)
                             connection.send("ACK:" + str(crc32_calculated) + "\n")

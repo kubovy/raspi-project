@@ -209,7 +209,7 @@ def looper():
         while not interrupted:
             time.sleep(1)
     except KeyboardInterrupt:
-        logger.error("Finishing up...")
+        logger.info("Finishing up...")
     except:
         logger.error("Unexpected Error!")
         traceback.print_exc()

@@ -101,6 +101,14 @@ class LCD(ModuleLooper):
             self.__message_queue.append(message)
         elif isinstance(message, basestring) and message.upper() in ["RESET", "ON", "OFF"]:
             self.__message_queue.append(message)
+        elif isinstance(message, list):
+            for part in message:
+                if isinstance(part, basestring):
+                    for i, s in enumerate(part.splitlines()):
+                        if i < self.__rows:
+                            self.__message_queue.append({'line': i + 1, 'message': s})
+                elif isinstance(part, int):
+                    self.__message_queue.append(part)
         elif message is not None:
             self.__message_queue.append(None)
             for m in message.split(":}"):

@@ -14,7 +14,12 @@ from neopixel import *
 
 
 def to_color(data):
-    return ColorGRB(data['red'], data['green'], data['blue'])
+    if isinstance(data, dict):
+        return ColorGRB(data['red'], data['green'], data['blue'])
+    elif isinstance(data, int):
+        return data
+    else:
+        return None
 
 
 def dump_color(color):

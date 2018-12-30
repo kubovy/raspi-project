@@ -6,12 +6,15 @@
 #
 import ast
 import json
+import os
 import time
 import traceback
 import yaml
 from copy import deepcopy
-from jinja2 import Template
+from itertools import product
+from jinja2 import Template, StrictUndefined, TemplateError
 
+from lib.ColorGRB import ColorGRB
 from lib.FileWatcherHandler import observe
 from lib.ModuleLooper import ModuleLooper
 
@@ -53,12 +56,14 @@ class StateMachine(ModuleLooper):
 
     __configuration_observer = None
 
-    def __init__(self, description_file=None, transactional=True, debug=False):
+    def __init__(self, description_file=None, transactional=True, optimize=True, debug=False):
         super(StateMachine, self).__init__(debug=debug)
 
         self.__transactional = transactional
+        self.__optimize = optimize
         self.__global_state = {}
         self.__description_file = description_file
+        self.__optimized_description_file = os.path.splitext(description_file)[0] + '.optimized.yml'
         self.__configuration_observer = observe(description_file, self.initialize, self.logger)
 
     def initialize(self):
@@ -77,31 +82,116 @@ class StateMachine(ModuleLooper):
         if self.module_ws281x_indicators is not None:
             self.module_ws281x_indicators.reset()
 
-        descriptions = yaml.load_all(open(self.__description_file, "r"))
+        reload_file = not self.__optimize or not os.path.isfile(self.__optimized_description_file) \
+            or os.stat(self.__description_file).st_mtime > os.stat(self.__optimized_description_file).st_mtime
+
+        description_file = self.__description_file if reload_file else self.__optimized_description_file
+
+        self.logger.info("Description file: " + description_file + "...")
+        descriptions = yaml.load_all(open(description_file, "r"))
 
         for description in descriptions:
             self.__devices = description['devices']
             self.__variables = description['vars']
-            self.logger.info("Description file ...")
+            self.__initial_state = description['initial_state'] if 'initial_state' in description.keys() else None
             for state in description['states']:
                 self.logger.info("Loading " + str(state['name']) + " state ...")
                 if self.__initial_state is None:
                     self.__initial_state = state['name']
                 self.__states[state['name']] = state
+                conditions = []
                 for condition in state['conditions']:
-                    if 'expressions' in condition.keys():
+                    action_to_evaluate = False
+                    if reload_file and 'expressions' in condition.keys():
                         for expression in condition['expressions']:
-                            if not isinstance(expression, basestring) \
-                                    and 'eval' in expression.keys() \
-                                    and expression['eval'] \
-                                    and 'value' in expression.keys() \
-                                    and expression['value'] not in self.__templates.keys():
-                                self.__templates[expression['value']] = Template(expression['value'])
+                            if isinstance(expression, dict) and 'name' in expression.keys():
+                                name = expression.pop('name', None)
+                                expression['kind'] = self.__devices[name]['kind']
+                                expression['key'] = self.__devices[name]['key']
+
                     if 'actions' in condition.keys():
                         for action in condition['actions']:
+                            if reload_file and 'name' in action.keys():
+                                name = action.pop('name', None)
+                                action['kind'] = self.__devices[name]['kind']
+                                action['key'] = self.__devices[name]['key']
+
                             if 'eval' in action.keys() and action['eval']:
+                                action_to_evaluate = True
                                 if action['value'] not in self.__templates.keys():
-                                    self.__templates[action['value']] = Template(action['value'])
+                                    self.__templates[action['value']] = Template(action['value'],
+                                                                                 undefined=StrictUndefined)
+
+                            elif reload_file:
+                                value = self.__get_value(action)
+                                if value is None:
+                                    raise ValueError('NULL action value on "' + str(action) + '"!')
+                                action['value'] = value
+
+                    if reload_file and action_to_evaluate:
+                        self.__global_state = {}
+                        combinations = {}
+                        if 'expressions' in condition.keys():
+                            for expression in condition['expressions']:
+                                if isinstance(expression, dict) and 'value' in expression.keys():
+                                    self.set_state(expression, value=expression['value'], evaluate=False)
+                                else:
+                                    possible_values = self.__get_possible_values(expression)
+                                    composite = self.__get_kind(expression) + '|' + self.__get_key(expression)
+                                    if len(possible_values) > 0:
+                                        combinations[composite] = possible_values
+                                        self.set_state(expression, value=possible_values[0], evaluate=False)
+
+                        if len(combinations.keys()) > 0:
+                            self.logger.debug("Expanding " + str(combinations) + ": " +
+                                              str(list(product(*combinations.values()))))
+                            for combination in product(*combinations.values()):
+                                combined_expressions = deepcopy(condition['expressions'])
+                                for idx, value in enumerate(combination):
+                                    composite = combinations.keys()[idx]
+                                    (kind, key) = composite.split('|', 2)
+                                    self.set_state(kind, key, value, evaluate=False)
+                                    for e in combined_expressions:
+                                        if isinstance(e, dict) and e['kind'] == kind and str(e['key']) == key:
+                                            e['value'] = value
+
+                                evaluated_actions = deepcopy(condition['actions'])
+                                for action in evaluated_actions:
+                                    value = self.__get_value(action, remove_evaluation_tag=True)
+                                    if value is None:
+                                        raise ValueError('NULL action value on "' + str(action) + '"!')
+                                    action['value'] = value
+
+                                conditions.append({'expressions': combined_expressions, 'actions': evaluated_actions})
+                        else:
+                            adapted_condition = {}
+                            if 'expressions' in condition.keys():
+                                adapted_condition['expressions'] = deepcopy(condition['expressions'])
+
+                            adapted_condition['actions'] = deepcopy(condition['actions'])
+                            for action in adapted_condition['actions']:
+                                value = self.__get_value(action, remove_evaluation_tag=True)
+                                if value is None:
+                                    raise ValueError('NULL action value on "' + str(action) + '"!')
+                                action['value'] = value
+
+                            conditions.append(adapted_condition)
+                    else:
+                        conditions.append(condition)
+
+                state['conditions'] = conditions
+
+        if reload_file:
+            yaml.dump(
+                {
+                    'devices': self.__devices,
+                    'vars': self.__variables,
+                    'initial_state': self.__initial_state,
+                    'states': self.__states.values()
+                },
+                file(self.__optimized_description_file, 'w'))
+
+        self.__global_state = {}
 
         if self.module_mcp23017 is not None:
             for bit, value in enumerate(self.module_mcp23017.get_all()):
@@ -129,8 +219,6 @@ class StateMachine(ModuleLooper):
 
         self.logger.debug("Evaluating gate \"ENTER\" in \"" + str(new_state_name) + "\" state")
         self.__evaluate("ENTER")
-        self.logger.debug("Evaluating gate \"INITIALIZING\" in \"" + str(new_state_name) + "\" state")
-        self.__evaluate("INITIALIZING")
         self.logger.debug("Evaluating gate \"INITIALIZED\" in \"" + str(new_state_name) + "\" state")
         self.__evaluate("INITIALIZED")
         if self.__current_state is not None and new_state_name == self.__current_state['name']:
@@ -146,7 +234,7 @@ class StateMachine(ModuleLooper):
 
         return state[kind][key] if key in state[kind] else None
 
-    def set_state(self, item, key=None, value=None):
+    def set_state(self, item, key=None, value=None, evaluate=True):
         item = self.__devices[item] if isinstance(item, basestring) and key is None else item
         kind = item if isinstance(item, basestring) else self.__get_kind(item)
         key = str(key) if isinstance(item, basestring) else self.__get_key(item)
@@ -154,12 +242,13 @@ class StateMachine(ModuleLooper):
         if kind not in self.__global_state.keys() or self.__global_state[kind] is None:
             self.__global_state[kind] = {}
 
-        previous_state = deepcopy(self.__global_state)
-        previous_value = self.get_state(kind, key)
-        if previous_value != value:
+        previous_state = deepcopy(self.__global_state) if evaluate else None
+        previous_value = self.get_state(kind, key) if evaluate else None
+        if not evaluate or previous_value != value:
             self.logger.debug(kind + "[" + str(key) + "]: " + str(previous_value) + " -> " + str(value))
             self.__global_state[kind][key] = value
-            self.__evaluate("NORMAL", previous_state)
+            if evaluate:
+                self.__evaluate("NORMAL", previous_state)
             self.__template_variables_cache = None
         return previous_value != value
 
@@ -170,8 +259,8 @@ class StateMachine(ModuleLooper):
             self.set_state('bluetooth', 'connected', False)
             # self.execute({'kind': 'lcd', 'key': None, 'value': "\n         BT\n\n--= DISCONNECTED =--"})
         elif message.startswith("BT:IDD:"):
-            btid = message[7:]
-            self.set_state('bluetooth', 'device', btid)
+            bt_id = message[7:]
+            self.set_state('bluetooth', 'device', bt_id)
         elif message.startswith("TBC:PULL"):
             self.module_bluetooth.send(json.dumps({'devices': self.__devices,
                                                    'vars': self.__variables,
@@ -227,11 +316,12 @@ class StateMachine(ModuleLooper):
             elif kind == 'bluetooth' and self.module_bluetooth is not None:
                 for key, value in rest.items():
                     if key is None:
-                        value = self.__template_variables()
+                        value = self.__template_variables(with_vars=False)
                         # self.bluetooth_server.send(yaml.dump(value, default_flow_style=False, encoding='utf-8'))
                         self.module_bluetooth.send(json.dumps(value))
                     else:
-                        value = self.__template_variables() if value == 'DUMP' else value
+                        self.set_state(kind, key, value, evaluate=False)
+                        value = self.__template_variables(with_vars=False) if value == 'DUMP' else value
                         self.module_bluetooth.send(json.dumps({key: value}))
             elif kind == 'lcd' and self.module_lcd is not None:
                 for key, value in rest.items():
@@ -241,13 +331,11 @@ class StateMachine(ModuleLooper):
                         self.module_lcd.post("reset")
                     elif key == "backlight":
                         self.module_lcd.post(value)
-                    elif key is not None:
-                        if value != "IGNORE":
-                            self.module_lcd.post(value, int(key))
-                    else:
-                        if value != "IGNORE":
-                            self.module_lcd.clear_queue()
-                            self.module_lcd.post(value)
+                    elif isinstance(key, int) and value != "IGNORE":
+                        self.module_lcd.post(value, int(key))
+                    elif value != "IGNORE":
+                        self.module_lcd.clear_queue()
+                        self.module_lcd.post(value)
             elif kind == 'mcp23017' and self.module_mcp23017 is not None:
                 for key, value in rest.items():
                     self.module_mcp23017.set(int(key), value, False)
@@ -263,7 +351,7 @@ class StateMachine(ModuleLooper):
             state = self.__get_key(goto_action)
             delay = self.__get_value(goto_action, False)
             self.logger.debug("Going to: " + str(state))
-            if delay is not None:
+            if delay is not None and delay > 0:
                 time.sleep(int(delay) / 1000.0)
             self.transit(state)
 
@@ -298,7 +386,31 @@ class StateMachine(ModuleLooper):
             value = "N/A"
         return value
 
-    def __template_variables(self):
+    def __get_possible_values(self, item):
+        if isinstance(item, dict) and 'values' in item.keys():
+            possible_values = item['values']
+        elif isinstance(item, dict) and 'name' in item.keys() and item['name'] in self.__devices \
+                and 'values' in self.__devices[item['name']]:
+            possible_values = self.__devices[item['name']]['values']
+        elif isinstance(item, dict) and 'kind' in item.keys() and 'key' in item.keys():
+            var = next((v for n, v in self.__devices.iteritems()
+                        if v['kind'] == item['kind'] and v['key'] == item['key']), None)
+            possible_values = var['values'] if var is not None and 'values' in var.keys() else None
+        else:
+            possible_values = None
+
+        if isinstance(possible_values, basestring):
+            possible_values = self.__variables[possible_values]
+
+        if possible_values is None and isinstance(item, dict) and \
+                ('kind' in item.keys() and item['kind'] == 'mcp23017' or
+                 'name' in item.keys() and item['name'] in self.__devices and self.__devices[item['name']]['kind']):
+            possible_values = [False, True]
+
+        self.logger.debug("Possible value of " + self.__get_descriptor(item) + ": " + str(possible_values))
+        return possible_values
+
+    def __template_variables(self, with_vars=True):
         while self.__template_variables_cache is None:
             self.__template_variables_cache = self.__variables.copy()
             if self.__template_variables_cache is not None:
@@ -306,26 +418,34 @@ class StateMachine(ModuleLooper):
 
             device_map = {}
             for device_name, device in self.__devices.iteritems():
-                if device_name not in device_map:
-                    device_map[device_name] = [None for _ in range(self.MAX_INDEX)]
-                device_map[device_name] = self.get_state(device)
+                value = self.get_state(device)
+                if value is not None:
+                    device_map[device_name] = value
 
             if self.__template_variables_cache is not None:
                 self.__template_variables_cache.update(device_map)
+
+            if self.__template_variables_cache is not None and with_vars:
+                self.__template_variables_cache.update({'vars': self.__template_variables_cache})
 
             if self.__template_variables_cache is None:
                 time.sleep(0.5)
         return self.__template_variables_cache
 
-    def __get_value(self, item, evaluate=True):
+    def __get_value(self, item, evaluate=True, remove_evaluation_tag=False):
         try:
             # self.logger.debug("Value: " + str(item) + " eval=" + str(evaluate))
-            if evaluate and 'value' in item.keys() and 'eval' in item.keys() and item['eval']:
+            if evaluate and isinstance(item, dict) and \
+                    'value' in item.keys() and 'eval' in item.keys() and item['eval']:
                 try:
                     # self.logger.debug("Template: " + item['value'] + " -> " + str(self.templates[item['value']]))
+                    # self.logger.debug("Template: " + item['value'])
                     if item['value'] not in self.__templates:
-                        self.__templates[item['value']] = Template(item['value'])
+                        self.__templates[item['value']] = Template(item['value'], undefined=StrictUndefined)
                     value = self.__templates[item['value']].render(self.__template_variables())
+                    if remove_evaluation_tag:
+                        item.pop('eval', None)
+
                     # self.logger.debug("Rendered Value: " + str(value))
                     if isinstance(value, basestring):
                         try:
@@ -337,12 +457,26 @@ class StateMachine(ModuleLooper):
                     self.logger.error("Template attribute error: " + str(e.message))
                     traceback.print_exc()
                     value = item['value']
-            elif 'value' in item.keys():
+                except TemplateError as e:
+                    self.logger.info(str(e.message) + " in " + str(item['value']))
+                    value = item['value']
+            elif isinstance(item, dict) and 'value' in item.keys():
                 value = item['value']
+            elif isinstance(item, dict) and 'kind' in item.keys() and item['kind'] == 'GOTO':
+                value = 0
             else:
                 value = None
 
-            return self.__variables[value] if value in self.__variables.keys() else value
+            value = self.__variables[value] if value in self.__variables.keys() else value
+
+            if isinstance(value, dict) and 'color' in value.keys() and isinstance(value['color'], dict) \
+                    and 'red' in value['color'].keys() \
+                    and 'green' in value['color'].keys() \
+                    and 'blue' in value['color'].keys():
+                color = value['color']
+                value['color'] = ColorGRB(color['red'], color['green'], color['blue'])
+
+            return value
         except:
             self.logger.error("Problem getting value!")
             traceback.print_exc()
@@ -351,7 +485,7 @@ class StateMachine(ModuleLooper):
     def __evaluate(self, gate="NORMAL", previous_state=None):
         """Evaluation
 
-        :param gate: one of: ENTER, INITIALIZING, INITIALIZED, NORMAL
+        :param gate: one of: ENTER, INITIALIZED, NORMAL
         """
         self.__transaction_start()
         current_state = deepcopy(self.__current_state)
@@ -370,7 +504,7 @@ class StateMachine(ModuleLooper):
                                 result = result and expression.upper() == gate
                                 changed = True
                             elif ('only' not in expression.keys() or expression['only'].upper() == gate) \
-                                    and gate in ["NORMAL", "INITIALIZING", "INITIALIZED"]:
+                                    and gate in ['INITIALIZED', 'NORMAL']:
                                 value = self.__get_value(expression) if 'value' in expression.keys() else None
                                 current = _reference_based_value(self.get_state(expression), value)
                                 previous = _reference_based_value(self.get_state(expression, state=previous_state)
@@ -380,7 +514,7 @@ class StateMachine(ModuleLooper):
                                 changed = changed or str(current) != str(previous) or gate != "NORMAL"
                                 additional_info = str(previous) + " -> " + str(current) + " ?= " + str(value)
                             self.logger.debug("Expression: " + self.__get_descriptor(expression) +
-                                              "in \"" + gate + "\" of \"" + current_state['name'] + "\" " +
+                                              " in state " + current_state['name'] + "[" + gate + "] " +
                                               additional_info + " => " + str(result) +
                                               (" CHANGED " if changed else " UNCHANGED "))
                     else:
@@ -390,14 +524,14 @@ class StateMachine(ModuleLooper):
                     if 'name' in current_state.keys() and 'name' in self.__current_state.keys() \
                             and current_state['name'] == self.__current_state['name'] \
                             and result and changed:
-                        expression = condition['expression'] if 'expression' in condition.keys() else None
-                        self.logger.debug("Condition: " + self.__get_descriptor(expression) +
-                                          " in " + current_state['name'] + "[" + gate + "] state FIRED!")
+                        # expression = condition['expressions'] if 'expressions' in condition.keys() else None
+                        self.logger.debug("Condition in " + current_state['name'] + "[" + gate + "] state FIRED!")
                         if 'actions' in condition.keys():
                             for action in condition['actions']:
-                                self.logger.debug(" -> action: " + self.__get_descriptor(action))
+                                self.logger.debug(" -> action: " + self.__get_descriptor(action) + " = " +
+                                                  str(self.__get_value(action)))
                                 if 'only' not in action.keys() or action['only'].upper() == gate:
-                                    self.__execute(action, gate in ['NORMAL', 'INITIALIZED'])
+                                    self.__execute(action, gate in ['INITIALIZED', 'NORMAL'])
 
         self.__transaction_end()
 
@@ -437,7 +571,7 @@ class StateMachine(ModuleLooper):
             state = self.__get_key(action)
             delay = self.__get_value(action)
             self.logger.debug("Going to: " + str(state))
-            if delay is not None:
+            if delay is not None and delay > 0:
                 time.sleep(int(delay) / 1000.0)
             self.transit(state)
         elif kind == 'bluetooth' and self.module_bluetooth is not None:
@@ -448,6 +582,7 @@ class StateMachine(ModuleLooper):
                 self.module_bluetooth.send(json.dumps(value))
             else:
                 value = self.__get_value(action)
+                self.set_state(action, value=value, evaluate=False)
                 value = self.__template_variables() if value == 'DUMP' else value
                 # self.bluetooth_server.send(yaml.dump({key: value}, default_flow_style=False, encoding='utf-8'))
                 self.module_bluetooth.send(json.dumps({key: value}))
