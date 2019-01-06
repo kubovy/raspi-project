@@ -13,6 +13,7 @@ import yaml
 from copy import deepcopy
 from itertools import product
 from jinja2 import Template, StrictUndefined, TemplateError
+from yaml.parser import ParserError
 
 from lib.ColorGRB import ColorGRB
 from lib.FileWatcherHandler import observe
@@ -88,7 +89,11 @@ class StateMachine(ModuleLooper):
         description_file = self.__description_file if reload_file else self.__optimized_description_file
 
         self.logger.info("Description file: " + description_file + "...")
-        descriptions = yaml.load_all(open(description_file, "r"))
+        try:
+            descriptions = yaml.load_all(open(description_file, "r"))
+        except ParserError:
+            descriptions = []
+            reload_file = False
 
         for description in descriptions:
             self.__devices = description['devices']
@@ -197,8 +202,9 @@ class StateMachine(ModuleLooper):
             for bit, value in enumerate(self.module_mcp23017.get_all()):
                 self.set_state("mcp23017", bit, value)
 
-        self.logger.info("Transiting to initial state: " + str(self.__initial_state) + " ...")
-        self.transit(self.__initial_state)
+        if self.__initial_state is not None:
+            self.logger.info("Transiting to initial state: " + str(self.__initial_state) + " ...")
+            self.transit(self.__initial_state)
 
     def start(self):
         if self.__transactional:
