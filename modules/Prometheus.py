@@ -55,10 +55,16 @@ class Prometheus(ModuleLooper):
         self.__camera_state_metric.labels(host=self.__host, label='default').set(1 if state else 0)
 
     def on_temperature_changed(self, temperature):
-        self.__temperature_metric.labels(host=self.__host, label='dht11').set(temperature)
+        try:
+            self.__temperature_metric.labels(host=self.__host, label='dht11').set(temperature)
+        except:
+            self.logger.error("Invalid temperature '" + str(temperature) + "'")
 
     def on_humidity_changed(self, humidity):
-        self.__humidity_metric.labels(host=self.__host, label='dht11').set(humidity)
+        try:
+            self.__humidity_metric.labels(host=self.__host, label='dht11').set(humidity)
+        except:
+            self.logger.error("Invalid humidity '" + str(humidity) + "'")
 
     def on_motion_change(self, state):
         self.__motion_state_metric.labels(host=self.__host, label='pir').set(1 if state else 0)
