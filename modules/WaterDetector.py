@@ -16,6 +16,7 @@ class WaterDetector(Module):
     def __init__(self, pin=23, debug=False):
         super(WaterDetector, self).__init__(debug=debug)
         self.logger.debug("PIN: " + str(pin))
+        self.pin = pin
 
         GPIO.setup(pin, GPIO.IN)
         # GPIO.add_event_detect(PIR_PIN, GPIO.RISING, callback=__motion__)
@@ -24,8 +25,15 @@ class WaterDetector(Module):
 
     def initialize(self):
         super(WaterDetector, self).initialize()
+        state = not GPIO.input(self.pin)
+        self.logger.info("Initializing: " + ("Water detected!" if state else "No water."))
+
         if self.module_mqtt is not None:
-            self.module_mqtt.publish("", "CLOSED", module=self)
+            self.module_mqtt.publish("", "OPEN" if state else "CLOSED", module=self)
+
+        for listener in self.listeners:
+            if hasattr(listener, 'on_water_change'):
+                listener.on_water_change(state)
 
     def __water__(self, pin):
         state = not GPIO.input(pin)
