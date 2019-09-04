@@ -24,11 +24,15 @@ class RPI(Module):
     def __display(self, state):
         if state:
             subprocess.call(["vcgencmd", "display_power", "1"])
-            my_env = os.environ.copy()
-            my_env["DISPLAY"] = ":0.0"
-            subprocess.Popen(["sudo", "-u", "pi", "xset", "s", "activate"], env=my_env)
+            # my_env = os.environ.copy()
+            # my_env["DISPLAY"] = ":0.0"
+            # subprocess.Popen(["sudo", "-u", "pi", "xset", "s", "activate"], env=my_env)
+            subprocess.call(["tvservice", "--preferred"])
+            subprocess.call(["chvt", "6"])
+            subprocess.call(["chvt", "7"])
         else:
             subprocess.call(["vcgencmd", "display_power", "0"])
+            subprocess.call(["tvservice", "--off"])
 
         if self.module_mqtt is not None:
             self.module_mqtt.publish("display", "ON" if state else "OFF", module=self)
