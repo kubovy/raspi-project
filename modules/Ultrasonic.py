@@ -6,7 +6,6 @@
 import time
 
 import RPi.GPIO as GPIO
-from rx import Observable
 
 from lib.ModuleLooper import ModuleLooper
 
@@ -15,12 +14,12 @@ class Ultrasonic(ModuleLooper):
     """Ultrasonic sensor module"""
 
     __delay = 0
+    __handlers = []
 
     def __init__(self, pin_trigger=22, pin_echo=27, debug=False):
         super(Ultrasonic, self).__init__(debug=debug)
         self.__pin_echo = pin_echo
         self.__pin_trigger = pin_trigger
-        self.__source = Observable.interval(1000).map(lambda i: self.get_distance())
 
         GPIO.setup(self.__pin_trigger, GPIO.OUT, initial=GPIO.LOW)
         GPIO.setup(self.__pin_echo, GPIO.IN)
@@ -43,11 +42,14 @@ class Ultrasonic(ModuleLooper):
         t2 = time.time()
         return (t2 - t1) * 340000 / 2
 
-    def subscribe(self, on_next):
-        return self.__source.subscribe(
-            on_next=on_next,
-            on_error=lambda e: self.logger.error(str(e)),
-            on_completed=lambda: self.logger.info("Subscription completed"))
+    def subscribe(self, handler):
+        self.__handlers.append(handler)
+
+    def unsubscribe(self, handler):
+        try:
+            self.__handlers.remove(handler)
+        except ValueError:
+            self.logger.warn("Not subscribed")
 
     def on_mqtt_message(self, path, payload):
         self.logger.info("Message: " + "/".join(path) + ": " + payload)
@@ -73,4 +75,6 @@ class Ultrasonic(ModuleLooper):
         for listener in self.listeners:
             if hasattr(listener, 'on_distance_change'):
                 listener.on_distance_change(distance)
+        for handler in self.__handlers:
+            handler(distance)
         time.sleep(self.__delay)

@@ -3,7 +3,6 @@
 #
 # Author: Jan Kubovy (jan@kubovy.eu)
 #
-import os
 import subprocess
 
 from lib.Module import Module

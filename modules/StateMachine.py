@@ -232,8 +232,8 @@ class StateMachine(ModuleLooper):
 
     def get_state(self, item, key=None, state=None):
         state = self.__global_state if state is None else state
-        kind = item if isinstance(item, basestring) else self.__get_kind(item)
-        key = str(key) if isinstance(item, basestring) else self.__get_key(item)
+        kind = item if isinstance(item, str) else self.__get_kind(item)
+        key = str(key) if isinstance(item, str) else self.__get_key(item)
 
         if kind not in state.keys() or state[kind] is None:
             state[kind] = {}
@@ -241,9 +241,9 @@ class StateMachine(ModuleLooper):
         return state[kind][key] if key in state[kind] else None
 
     def set_state(self, item, key=None, value=None, evaluate=True):
-        item = self.__devices[item] if isinstance(item, basestring) and key is None else item
-        kind = item if isinstance(item, basestring) else self.__get_kind(item)
-        key = str(key) if isinstance(item, basestring) else self.__get_key(item)
+        item = self.__devices[item] if isinstance(item, str) and key is None else item
+        kind = item if isinstance(item, str) else self.__get_kind(item)
+        key = str(key) if isinstance(item, str) else self.__get_key(item)
 
         if kind not in self.__global_state.keys() or self.__global_state[kind] is None:
             self.__global_state[kind] = {}
@@ -364,7 +364,7 @@ class StateMachine(ModuleLooper):
         time.sleep(0.4)
 
     def __get_kind(self, item):
-        if isinstance(item, basestring):
+        if isinstance(item, str):
             return "STR"
         elif 'kind' in item.keys():
             return item['kind']
@@ -375,7 +375,7 @@ class StateMachine(ModuleLooper):
 
     def __get_key(self, item):
         key = None
-        if isinstance(item, basestring):
+        if isinstance(item, str):
             key = item
         elif 'key' in item.keys():
             key = item['key']
@@ -386,7 +386,7 @@ class StateMachine(ModuleLooper):
     def __get_descriptor(self, item):
         if item is not None:
             value = str(self.__get_kind(item)) + "[" + str(self.__get_key(item)) + "]"
-            if not isinstance(item, basestring) and 'name' in item.keys():
+            if not isinstance(item, str) and 'name' in item.keys():
                 value += " (" + item['name'] + ")"
         else:
             value = "N/A"
@@ -405,7 +405,7 @@ class StateMachine(ModuleLooper):
         else:
             possible_values = None
 
-        if isinstance(possible_values, basestring):
+        if isinstance(possible_values, str):
             possible_values = self.__variables[possible_values]
 
         if possible_values is None and isinstance(item, dict) and \
@@ -453,7 +453,7 @@ class StateMachine(ModuleLooper):
                         item.pop('eval', None)
 
                     # self.logger.debug("Rendered Value: " + str(value))
-                    if isinstance(value, basestring):
+                    if isinstance(value, str):
                         try:
                             value = ast.literal_eval(value)
                         except BaseException as e:
@@ -506,7 +506,7 @@ class StateMachine(ModuleLooper):
                     if 'expressions' in condition.keys():
                         for expression in condition['expressions']:
                             additional_info = ""
-                            if isinstance(expression, basestring):
+                            if isinstance(expression, str):
                                 result = result and expression.upper() == gate
                                 changed = True
                             elif ('only' not in expression.keys() or expression['only'].upper() == gate) \

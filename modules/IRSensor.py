@@ -6,18 +6,17 @@
 import time
 
 import RPi.GPIO as GPIO
-from rx import Observable
 
 from lib.ModuleLooper import ModuleLooper
 
 
 class IRSensor(ModuleLooper):
     __state = []
+    __handlers = []
 
     def __init__(self, pins=None, debug=False):
         super(IRSensor, self).__init__(debug=debug)
         self.__pins = [19, 16] if pins is None else pins
-        self.__source = Observable.interval(50).map(lambda x: self.__get_state())
 
         for i in range(0, len(self.__pins)):
             self.__state.append(1)
@@ -29,11 +28,14 @@ class IRSensor(ModuleLooper):
             if self.module_mqtt is not None:
                 self.module_mqtt.publish(str(i), "OFF", module=self)
 
-    def subscribe(self, on_next):
-        return self.__source.subscribe(
-            on_next=on_next,
-            on_error=lambda e: self.logger.error(str(e)),
-            on_completed=lambda: self.logger.info("Subscription completed"))
+    def subscribe(self, handler):
+        self.__handlers.append(handler)
+
+    def unsubscribe(self, handler):
+        try:
+            self.__handlers.remove(handler)
+        except ValueError:
+            self.logger.warn("Not subscribed")
 
     def looper(self):
         state = self.__get_state()
@@ -44,6 +46,8 @@ class IRSensor(ModuleLooper):
                     self.__state[i] = state[i]
                     payload = "OPEN" if self.__state[i] == 0 else "CLOSED"
                     self.module_mqtt.publish(str(i), payload, module=self)
+        for handler in self.__handlers:
+            handler(state)
         time.sleep(0.05)
 
     def __get_state(self):

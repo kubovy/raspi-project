@@ -87,7 +87,7 @@ class WS281xIndicators(ModuleLooper):
 
     def set(self, index, payload):
         self.logger.debug("Setting " + str(index) + " to " + str(payload) + " " + str(type(payload)))
-        if isinstance(payload, basestring):
+        if isinstance(payload, str):
             data = None
             try:
                 data = json.loads("[" + payload + "]")

@@ -9,13 +9,14 @@ from os.path import dirname
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from Logger import Logger
+from lib.Logger import Logger
 
 
 def observe(path, listener, logger=None):
     """Creates an observer to the provided path
 
-    :param listener: no-arg method called when change (creation/modification) happens to the file
+    :param path: Path to a file to watch.
+    :param listener: no-arg method called when change (creation/modification) happens to the file.
     :param logger: optional logger. A new will be created if none is provided.
     """
     observer = None

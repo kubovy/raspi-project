@@ -31,7 +31,7 @@ class MQTT(ModuleLooper):
     def publish(self, topic, payload=None, qos=0, retrain=False, module=None):
         path = [self.client_id, 'state']
         if module is not None:
-            path.append(module if isinstance(module, basestring) else to_snake_case(type(module).__name__, "-"))
+            path.append(module if isinstance(module, str) else to_snake_case(type(module).__name__, "-"))
         if topic is not None and topic != "":
             path.append(topic)
         self.logger.debug("Publishing: " + "/".join(path) + " qos=" + str(qos) + ", retain=" + str(retrain) + ": " +
@@ -65,6 +65,7 @@ class MQTT(ModuleLooper):
     def __on_message(self, client, userdata, msg):
         """The callback for when a PUBLISH message is received from the server."""
         try:
+            msg.payload = msg.payload.decode('ascii')
             self.logger.debug("Received " + msg.topic + ": '" + str(msg.payload) + "'")
             path = msg.topic.split("/")
             # payload = msg.payload

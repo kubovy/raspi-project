@@ -99,11 +99,11 @@ class LCD(ModuleLooper):
             self.__message_queue.append(None)
         elif isinstance(message, bool):
             self.__message_queue.append(message)
-        elif isinstance(message, basestring) and message.upper() in ["RESET", "ON", "OFF"]:
+        elif isinstance(message, str) and message.upper() in ["RESET", "ON", "OFF"]:
             self.__message_queue.append(message)
         elif isinstance(message, list):
             for part in message:
-                if isinstance(part, basestring):
+                if isinstance(part, str):
                     for i, s in enumerate(part.splitlines()):
                         if i < self.__rows:
                             self.__message_queue.append({'line': i + 1, 'message': s})
@@ -127,9 +127,9 @@ class LCD(ModuleLooper):
         """Turn on/off the LCD backlight"""
         if isinstance(state, bool):
             self.__device.write_cmd(self.LCD_BACKLIGHT if state else self.LCD_NOBACKLIGHT)
-        elif isinstance(state, basestring) and str(state).lower() == "on":
+        elif isinstance(state, str) and str(state).lower() == "on":
             self.__device.write_cmd(self.LCD_BACKLIGHT)
-        elif isinstance(state, basestring) and str(state).lower() == "off":
+        elif isinstance(state, str) and str(state).lower() == "off":
             self.__device.write_cmd(self.LCD_NOBACKLIGHT)
         else:
             print("Unknown State!")
@@ -155,13 +155,13 @@ class LCD(ModuleLooper):
                 self.clear()
             elif isinstance(message, bool):
                 self.backlight(message)
-            elif isinstance(message, basestring) and message.upper() in ["ON", "OFF"]:
+            elif isinstance(message, str) and message.upper() in ["ON", "OFF"]:
                 self.backlight(message.upper() == "ON")
             elif isinstance(message, int):
                 sleep(message / 1000.0)
             elif isinstance(message, float):
                 sleep(message)
-            elif isinstance(message, basestring) and message.upper() == "RESET":
+            elif isinstance(message, str) and message.upper() == "RESET":
                 self.__setup()
                 self.clear()
             elif isinstance(message, dict) and 'line' in message.keys() and 'message' in message.keys():

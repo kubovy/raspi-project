@@ -232,21 +232,21 @@ def looper():
 
 
 def help():
-    print """Usage client-id [options]:
+    print("""Usage client-id [options]:
 
 Options:
   -h, --help                                 This screen
   -d, --debug                                This screen
-  -m, --module name[,name[,...]]             One or more modules to load"""
+  -m, --module name[,name[,...]]             One or more modules to load""")
     for module_file in sorted(os.listdir('modules')):
         if module_file.endswith(".py") and module_file != "__init__.py":
             module_name = module_file[:-3]
-            print "      ", to_snake_case(module_name, separator="-").ljust(20), ": ", \
-                to_snake_case(module_name, separator=" ", case=None)
+            print("      ", to_snake_case(module_name, separator="-").ljust(20), ": ", \
+                to_snake_case(module_name, separator=" ", case=None))
 
     for module_name, parameters in sorted(module_parameters.items(), key=lambda tupple: tupple[0]):
-        print ""
-        print to_snake_case(module_name, separator=" ", case=None)
+        print("")
+        print(to_snake_case(module_name, separator=" ", case=None))
         for option_name, definition in sorted(parameters.items(), key=lambda tupple: tupple[0]):
             if option_name != "client-id" and (not isinstance(definition[0], bool) or not definition[0]):
                 option = "  --" + to_snake_case(module_name, separator="-") + "-" + option_name
@@ -267,12 +267,12 @@ def main(argv):
         opts, args = getopt.getopt(argv, "hd:m:", options)
     except getopt.GetoptError as e:
         help()
-        print "\nError: ", e.msg
+        print("\nError: ", e.msg)
         sys.exit(1)
 
     module_names = []
     for opt, arg in opts:
-        print opt + " = " + arg
+        print(opt + " = " + arg)
         if opt in ("-h", "--help"):
             help()
             sys.exit()
@@ -324,7 +324,7 @@ def main(argv):
                             parameter_values[module_name][parameter_name] = values
                         elif isinstance(definition[0], list):
                             parameter_values[module_name][parameter_name] = arg.split(",")
-                        elif isinstance(definition[0], basestring):
+                        elif isinstance(definition[0], str):
                             parameter_values[module_name][parameter_name] = arg
 
     for module_name, parameters in parameter_values.items():
@@ -335,7 +335,7 @@ def main(argv):
                 if required_values in [REQUIRED_STRING, REQUIRED_INT]:
                     option = "--" + to_snake_case(module_name, separator="-") + "-" + parameter_name.replace("_", "-")
                     help()
-                    print "Parameter: ", option, " is required!"
+                    print("Parameter: ", option, " is required!")
                     exit(2)
 
     initialize(module_names)

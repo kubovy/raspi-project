@@ -39,9 +39,6 @@ class ObstacleAvoidance(Module):
     __left_timestamp = -1
     __right_timestamp = -1
 
-    __infrared_subscription = None
-    __ultrasonic_subscription = None
-
     __left_speed = 30
     __right_speed = 30
     __interval = 0
@@ -69,11 +66,10 @@ class ObstacleAvoidance(Module):
         #    self.thread.start()
         if self.module_mqtt is not None:
             self.module_mqtt.publish("obstacle-avoidance", "ON", module=self)
-        if self.__infrared_subscription is None and self.module_ir_sensor is not None:
-            self.__infrared_subscription = self.module_ir_sensor.subscribe(
-                lambda state: self.__on_infrared_distance(state))
-        if self.__ultrasonic_subscription is None and self.module_ultrasonic is not None:
-            self.__ultrasonic_subscription = self.module_ultrasonic.subscribe(self.__on_ultrasonic_distance)
+        if self.module_ir_sensor is not None:
+            self.module_ir_sensor.subscribe(self.__on_infrared_distance)
+        if self.module_ultrasonic is not None:
+            self.module_ultrasonic.subscribe(self.__on_ultrasonic_distance)
         # return self.thread
         # self.update_wheels()
 
@@ -84,12 +80,11 @@ class ObstacleAvoidance(Module):
         # self.thread = None
         if self.module_mqtt is not None:
             self.module_mqtt.publish("obstacle-avoidance", "OFF", module=self)
-        if self.__infrared_subscription is not None:
-            self.__infrared_subscription.dispose()
-            self.__infrared_subscription = None
-        if self.__ultrasonic_subscription is not None:
-            self.__ultrasonic_subscription.dispose()
-            self.__ultrasonic_subscription = None
+
+        if self.module_ir_sensor is not None:
+            self.module_ir_sensor.unsubscribe(self.__on_infrared_distance)
+        if self.module_ultrasonic is not None:
+            self.module_ultrasonic.unsubscribe(self.__on_ultrasonic_distance)
         if self.module_wheels is not None:
             self.module_wheels.halt()
 
