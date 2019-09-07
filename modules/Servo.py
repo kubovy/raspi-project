@@ -14,13 +14,13 @@ class Servo(Module):
 
     module_mqtt = None
 
-    def __init__(self, servo_mins=None, servo_mids=None, servo_maxs=None, degree_span=180.0, debug=False):
+    def __init__(self, mins=None, mids=None, maxs=None, degree_span=180.0, debug=False):
         super(Servo, self).__init__(debug=debug)
 
-        self.__servo_mins = [1000] if servo_mins is None else servo_mins
-        self.__servo_mids = [1500] if servo_mids is None else servo_mids
-        self.__servo_maxs = [2000] if servo_maxs is None else servo_maxs
-        self.__servo_points_per_degree = float(servo_maxs[0] - servo_mins[0]) / degree_span
+        self.__servo_mins = [1000] if mins is None else mins
+        self.__servo_mids = [1500] if mids is None else mids
+        self.__servo_maxs = [2000] if maxs is None else maxs
+        self.__servo_points_per_degree = float(maxs[0] - mins[0]) / degree_span
 
         self.__pwm = PCA9685(0x40, debug)
         self.__pwm.setPWMFreq(50)

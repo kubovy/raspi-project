@@ -94,9 +94,9 @@ module_parameters = {
         'start': [False, "", "Starts serial reader"]
     },
     'Servo': {
-        'servo-mins': [[1000], "min1[,min2[,...]", ""],
-        'servo-mids': [[1500], "mid1[,mid2[,...]", ""],
-        'servo-maxs': [[2000], "max2[,max2[,...]", ""],
+        'mins': [[1000], "min1[,min2[,...]", ""],
+        'mids': [[1500], "mid1[,mid2[,...]", ""],
+        'maxs': [[2000], "max2[,max2[,...]", ""],
         'degree-span': [180.0, "degrees", ""]
     },
     'StateMachine': {
@@ -278,6 +278,7 @@ def main(argv):
             sys.exit()
         elif opt in ("-d", "--debug"):
             debug = True
+            logger = Logger("MAIN", debug)
         elif opt in ("-m", "--module") and arg not in module_names:
             for module_id in arg.split(","):
                 found = False
